@@ -66,7 +66,7 @@ def review_change(db,proposal,agent,generate):
     ]
     review=generate(agent["provider"],agent["model"],prompt)
     if not isinstance(review,str) or len(review)>30000:raise ValueError("Rapport d'audit invalide")
-    verdict="approved" if re.match(r"^VERDICT:\\s*APPROVE\\s*(?:\\n|$)",review.lstrip()) else "changes_requested"
+    verdict="approved" if re.match(r"^VERDICT:\s*APPROVE\s*(?:\n|$)",review.lstrip()) else "changes_requested"
     db.write("UPDATE proposals SET status=?,reviewer=?,review=? WHERE id=? AND status IN ('proposed','approved','changes_requested')",
              (verdict,agent["id"],review,proposal["id"]))
     db.add(proposal["chat"],agent["name"],"Audit de "+proposal["path"]+" : "+verdict+"\n"+review[:4000])
