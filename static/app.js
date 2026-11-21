@@ -214,4 +214,68 @@ async function workbenchDetail(id){
 const originalWorkspaceRender=render;
 render=function(){originalWorkspaceRender();workbenchRefresh()};
 
+
+// v0.6: local archive import. No file is sent to a model during preview.
+let archivePayload=null,archiveNames=[];
+$('importArchive').onclick=()=>{$('importFile').value='';$('importFile').click()};
+$('importFile').onchange=async()=>{
+ const file=$('importFile').files?.[0];if(!file)return;
+ if(file.size>8_000_000)return toast('Fichier limité à 8 Mo');
+ if(!projectId)return toast('Choisis un projet d’abord');
+ const button=$('importArchive');button.disabled=true;
+ try{
+  const encoded=await new Promise((resolve,reject)=>{
+   const reader=new FileReader();reader.onload=()=>resolve(String(reader.result).split(',')[1]);
+   reader.onerror=()=>reject(Error('Impossible de lire le fichier'));
+   reader.readAsDataURL(file);
+  });
+  archivePayload={content:encoded,filename:file.name,source:'auto'};
+  const data=await api('import/preview',archivePayload);
+  const dlg=document.createElement('dialog');dlg.className='preview-dialog import-dialog';
+  const panel=el('div','preview-body');panel.append(el('h3','','Importer dans '+activeProject().name));
+  panel.append(el('p','inspector-info',data.count+' conversations détectées. Rien n’est importé sans sélection.'));
+  const tools=el('div','import-controls');const search=el('input','field');search.placeholder='Filtrer les titres';
+  const all=el('button','ghost','Tout sélectionner');const none=el('button','ghost','Tout désélectionner');tools.append(search,all,none);panel.append(tools);
+  const list=el('div','import-items');const checks=[];
+  for(const item of data.conversations){
+    const row=el('label','import-item');const cb=document.createElement('input');cb.type='checkbox';cb.checked=false;
+    cb.value=item.id;checks.push({box:cb,element:row,item});
+    const desc=el('div','');desc.append(el('strong','',item.title),el('small','',item.source+' · '+item.messages+' messages'),el('span','',item.first_message));
+    row.append(cb,desc);list.append(row);
+  }
+  panel.append(list);
+  search.oninput=()=>{const q=search.value.toLowerCase();checks.forEach(x=>{x.element.hidden=!x.item.title.toLowerCase().includes(q)})};
+  all.onclick=()=>checks.filter(x=>!x.element.hidden).forEach(x=>x.box.checked=true);
+  none.onclick=()=>checks.forEach(x=>x.box.checked=false);
+  const actions=el('div','preview-actions');const cancel=el('button','ghost','Annuler');cancel.onclick=()=>dlg.close();
+  const save=el('button','primary','Importer la sélection');
+  save.onclick=async()=>{
+    const selected=checks.filter(x=>x.box.checked).map(x=>x.box.value);
+    if(!selected.length)return toast('Sélectionne au moins une conversation');
+    if(selected.length>100)return toast('Maximum 100 conversations par import');
+    save.disabled=true;
+    try{
+      const result=await api('import/selected',{project:projectId,...archivePayload,selected});
+      dlg.close();archivePayload=null;await refresh();toast(result.count+' conversations importées');
+    }catch(e){toast(e.message)}finally{save.disabled=false}
+  };
+  actions.append(cancel,save);panel.append(actions);dlg.append(panel);document.body.append(dlg);
+  dlg.onclose=()=>{dlg.remove();archivePayload=null};dlg.showModal();
+ }catch(e){toast(e.message)}finally{button.disabled=false}
+};
+$('searchArchive').onclick=()=>{
+ if(!projectId)return toast('Sélectionne un projet');
+ openDialog('Rechercher dans les conversations',[{key:'q',label:'Mot ou expression'}],async d=>{
+   const result=await api('search?project='+encodeURIComponent(projectId)+'&q='+encodeURIComponent(d.q));
+   const area=$('searchResults');area.hidden=false;area.replaceChildren();
+   const heading=el('div','file-subheading',result.results.length+' RÉSULTATS · CLIQUER POUR OUVRIR');area.append(heading);
+   for(const item of result.results){
+     const row=el('button','search-result');row.append(el('strong','',item.title),el('small','',item.speaker+' : '+item.excerpt));
+     row.onclick=()=>{chatId=item.chat;area.hidden=true;render()};
+     area.append(row);
+   }
+   if(!result.results.length)area.append(el('small','inspector-info','Aucun résultat'));
+ });
+};
+
 refresh(false).catch(e=>toast(e.message));
