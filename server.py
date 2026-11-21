@@ -195,7 +195,13 @@ class Handler(BaseHTTPRequestHandler):
                 write("INSERT INTO projects VALUES(?,?,?,?,?)",(pid,str(d.get("name","Nouveau projet"))[:120],str(d.get("repo",""))[:300],str(d.get("instructions",""))[:4000],now()))
                 self.send({"id":pid});return
             if p=="/api/projects/update":
-                write("UPDATE projects SET name=?,repo=?,instructions=? WHERE id=?",(str(d["name"])[:120],str(d.get("repo",""))[:300],str(d.get("instructions",""))[:4000],d["id"]))
+                previous=one("SELECT repo FROM projects WHERE id=?",(d["id"],))
+                if not previous:raise ValueError("Projet introuvable")
+                new_repo=str(d.get("repo",""))[:300]
+                with LOCK,connection() as con:
+                    con.execute("UPDATE projects SET name=?,repo=?,instructions=? WHERE id=?",(str(d["name"])[:120],new_repo,str(d.get("instructions",""))[:4000],d["id"]))
+                    if previous["repo"]!=new_repo:
+                        con.execute("DELETE FROM project_files WHERE project=?",(d["id"],))
                 self.send({"ok":True});return
             if p=="/api/chats":
                 if not one("SELECT id FROM projects WHERE id=?",(d["project"],)):raise ValueError("Projet absent")
