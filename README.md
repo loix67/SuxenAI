@@ -1,18 +1,288 @@
-# SuxenAI v1.1.0
+# SuxenAI
 
-## Édition desktop Chromium — Mac et Windows
+**Plusieurs IA, une seule discussion.**
+SuxenAI réunit ChatGPT, Claude, Gemini, Mistral et des modèles locaux (Ollama) dans un même espace de travail : vous posez une question une fois, les IA répondent, se lisent et se complètent. Tout reste sur votre ordinateur.
 
-La version Electron affiche le workspace et un ou deux sites officiels d'IA dans la même fenêtre. Dans le mode **Web**, sélectionnez un panneau et cliquez sur ChatGPT, Claude, Gemini ou Le Chat. Les sessions sont conservées dans des profils Chromium distincts. Les connexions non prises en charge (notamment les restrictions de certains fournisseurs d'identité) restent accessibles via le bouton **Navigateur externe**. Aucun prompt automatique, aucune lecture des cookies et aucune extraction des réponses ; la copie et le collage restent manuels.
+Logiciel libre (licence MIT), gratuit, en français, pour macOS et Windows.
 
-Le serveur local est limité à la boucle locale et exige un jeton de session aléatoire dans l'édition desktop. Les pages distantes sont isolées, sans Node.js ni accès IPC ; l'accès aux ressources locales, les fenêtres non sollicitées, les permissions Web et les téléchargements sont bloqués. Chaque site reste soumis à ses conditions d'utilisation et à ses propres limites.
+---
 
-Les archives Mac Apple Silicon, Intel et Windows x64 sont produites par le workflow **Desktop Chromium** sur GitHub Actions. Aucun compte développeur Apple, notarisation ou publication dans un store : archives ZIP à décompresser. Les alertes de sécurité de l'OS restent applicables.
+## Sommaire
 
-### Compiler depuis le dépôt (développeurs)
+1. [Ce que fait SuxenAI](#ce-que-fait-suxenai)
+2. [Installation](#installation)
+3. [Premier lancement](#premier-lancement)
+4. [Les trois modes : Web, API, Local](#les-trois-modes--web-api-local)
+5. [Utiliser l'application](#utiliser-lapplication)
+6. [Réglages](#réglages)
+7. [Confidentialité et sécurité](#confidentialité-et-sécurité)
+8. [Questions fréquentes](#questions-fréquentes)
+9. [Pour les développeurs](#pour-les-développeurs)
+10. [Licence](#licence)
 
-Python 3.12+, Node.js 24 et pnpm 11 sont requis pour construire le logiciel, pas pour l'utiliser.
+---
 
-```sh
+## Ce que fait SuxenAI
+
+- **Une discussion commune** : vous écrivez à « l'équipe », chaque IA active répond dans le même fil et voit les réponses des autres.
+- **Vos abonnements, sans clé API** (mode Web) : ChatGPT, Claude, Gemini et Le Chat s'affichent **dans la fenêtre de l'application**, à côté de la discussion. Plus besoin de jongler entre les onglets.
+- **Collaboration automatique** (mode API) : avec vos clés API, les IA échangent entre elles, en un ou plusieurs tours.
+- **IA locales gratuites** (mode Local) : modèles Ollama exécutés sur votre machine, sans Internet ni crédits.
+- **Contexte partagé** : documents (PDF, Word, Excel, texte), notes et fichiers d'un dépôt GitHub, transmis aux IA uniquement si vous le décidez.
+- **Atelier de code** : une IA propose une modification, une autre l'audite, vous validez avant l'ouverture d'une pull request brouillon.
+- **Import de vos anciennes conversations** ChatGPT et Claude, recherche dans tous vos projets, sauvegarde complète.
+
+---
+
+## Installation
+
+### Application de bureau (recommandé)
+
+C'est la version qui affiche les sites des IA directement dans la fenêtre.
+
+1. Ouvrez la page [Releases](https://github.com/loix67/SuxenAI/releases) (ou l'onglet **Actions** → dernière exécution réussie de **Desktop Chromium** → *Artifacts*).
+2. Téléchargez l'archive correspondant à votre ordinateur :
+
+   | Fichier | Ordinateur |
+   |---|---|
+   | `SuxenAI-Mac-Apple-Silicon.zip` | Mac M1, M2, M3, M4… |
+   | `SuxenAI-Mac-Intel.zip` | Mac Intel |
+   | `SuxenAI-Windows-x64.zip` | Windows 10 / 11 (64 bits) |
+
+3. Décompressez l'archive.
+   - **Mac** : glissez `SuxenAI.app` dans **Applications**.
+   - **Windows** : placez le dossier où vous voulez et lancez `SuxenAI.exe`.
+
+Aucun Python ni Node.js n'est nécessaire : tout est inclus.
+
+> **Premier lancement sur Mac.** L'application n'est pas signée par Apple (projet gratuit, sans compte développeur payant), macOS la bloque donc la première fois :
+> 1. Double-cliquez sur `SuxenAI.app`, puis fermez l'alerte.
+> 2. Ouvrez **Réglages Système → Confidentialité et sécurité**, descendez jusqu'au message concernant SuxenAI et cliquez **Ouvrir quand même**.
+>
+> Si macOS indique que l'app est « endommagée », lancez dans le Terminal :
+> ```bash
+> xattr -dr com.apple.quarantine /Applications/SuxenAI.app
+> ```
+>
+> **Sur Windows**, SmartScreen peut afficher « Windows a protégé votre ordinateur » : cliquez **Informations complémentaires → Exécuter quand même**.
+
+### Version navigateur (sans installation)
+
+Pour essayer rapidement, ou sur Linux. Les sites des IA s'ouvrent alors dans des onglets de votre navigateur, pas dans la fenêtre.
+
+Prérequis : [Python 3.10 ou plus récent](https://www.python.org/downloads/).
+
+```bash
+git clone https://github.com/loix67/SuxenAI.git
+cd SuxenAI
+python3 server.py
+```
+
+Puis ouvrez **http://127.0.0.1:8765**. Pour utiliser un autre port : `SUXENAI_PORT=8766 python3 server.py`.
+Sur Mac, vous pouvez aussi double-cliquer sur `SuxenAI.app` à la racine du dépôt : il démarre le serveur et ouvre le navigateur.
+
+La lecture des PDF nécessite `pypdf` (`python3 -m pip install pypdf`). Tout le reste fonctionne sans dépendance.
+
+---
+
+## Premier lancement
+
+Au démarrage, SuxenAI crée :
+
+- un projet **« Premier projet »** avec une discussion **« Discussion collective »** ;
+- une équipe d'exemple (GPT, Claude, Mistral) ;
+- le mode **Web**, qui ne fait **aucun appel payant**.
+
+Vous pouvez commencer tout de suite en mode Web avec vos abonnements, sans rien configurer.
+
+---
+
+## Les trois modes : Web, API, Local
+
+Le sélecteur **Web · API · Local**, en haut au centre, s'applique au projet en cours. Une ligne sous la barre rappelle le mode actif.
+
+| | **Web** | **API** | **Local** |
+|---|---|---|---|
+| Utilise | Vos abonnements (ChatGPT Plus, Claude Pro…) sur les sites officiels | Vos clés API | Modèles Ollama sur votre machine |
+| Coût | Rien de plus que vos abonnements | Facturé à l'usage par chaque fournisseur | Gratuit |
+| Les IA se répondent automatiquement | Non : copier-coller manuel | **Oui** | **Oui** |
+| Configuration | Aucune | Clés dans **Réglages → Connexions IA** | Installer [Ollama](https://ollama.com) |
+
+> Un abonnement ChatGPT Plus ou Claude Pro **ne fournit pas** de clé API : ce sont deux offres différentes. Le passage en mode API demande une confirmation.
+
+### Mode Web : vos abonnements, dans la fenêtre
+
+1. Choisissez **Web**.
+2. *(Application de bureau)* Choisissez **Panneau 1** ou **Panneau 2**, puis cliquez sur **ChatGPT**, **Claude**, **Gemini** ou **Le Chat**. Le site officiel s'ouvre à droite de l'application ; deux IA peuvent être affichées côte à côte. Connectez-vous normalement : la session est conservée pour les fois suivantes.
+3. **Préparer la demande** : écrivez votre question, cochez si besoin *Inclure les 6 derniers messages* pour donner le contexte, cliquez **Aperçu** puis **Copier**, et collez dans le site de l'IA.
+4. **Rapporter la réponse** : copiez la réponse de l'IA, choisissez le service utilisé, collez-la et cliquez **Ajouter à la discussion**.
+
+Toutes les réponses sont ainsi réunies dans la même discussion : vous pouvez par exemple transmettre la réponse de ChatGPT à Claude pour qu'il la critique.
+
+Si un site refuse la connexion intégrée (c'est parfois le cas de « Se connecter avec Google »), utilisez le bouton **Navigateur externe**. SuxenAI ne lit jamais le contenu de ces pages, ni vos cookies, ni vos mots de passe : le transfert reste volontairement manuel.
+
+### Mode API : collaboration automatique
+
+1. Ouvrez **⚙ Réglages → Connexions IA**.
+2. Pour chaque fournisseur, cliquez **Obtenir une clé ↗**, créez la clé sur son site, collez-la, puis **Enregistrer** et **Tester**.
+3. Choisissez **API** et écrivez dans la discussion.
+
+| Fournisseur | Où créer la clé |
+|---|---|
+| OpenAI | platform.openai.com/api-keys |
+| Anthropic (Claude) | console.anthropic.com/settings/keys |
+| Mistral | console.mistral.ai/api-keys |
+| Google Gemini | aistudio.google.com/apikey |
+
+Une IA sans clé apparaît grisée avec la mention **clé requise** ; elle est ignorée.
+
+### Mode Local : gratuit et hors ligne
+
+1. Installez et démarrez [Ollama](https://ollama.com).
+2. **⚙ Réglages → Modèles locaux** : saisissez un nom de modèle (par exemple `llama3.2`, `mistral` ou `qwen2.5`), cliquez **Télécharger** (plusieurs Go), puis **Ajouter à la discussion**.
+3. Choisissez **Local**. Aucun appel ne part vers un service en ligne.
+
+---
+
+## Utiliser l'application
+
+L'écran comporte trois zones.
+
+### À gauche : projets et discussions
+
+- **＋ Nouvelle discussion** crée un fil dans le projet en cours.
+- **Rechercher…** : tapez un mot puis Entrée. Cochez **Tous les projets** pour chercher partout.
+- **Projets** (＋ pour en créer un) : chaque projet a ses discussions, ses consignes, son équipe et son mode.
+- Menu **⋯** en bas : importer des conversations, importer ou exporter un projet, exporter la discussion, sauvegarde complète.
+
+### Au centre : la discussion
+
+- Écrivez à l'équipe puis **Envoyer** (ou Entrée ; Maj+Entrée pour aller à la ligne).
+- **@Nom** s'adresse à une IA précise, par exemple : `@Claude peux-tu vérifier ce raisonnement ?`
+- **↻ Relancer** fait faire un tour de plus aux IA, pour qu'elles réagissent aux réponses des autres.
+- En haut à droite : **⑂** duplique la discussion (pour explorer une autre piste sans perdre l'originale) et **⛶** active le mode concentration (masque les panneaux latéraux).
+
+### À droite : équipe et contexte
+
+**Équipe IA** (modes API et Local)
+- **＋** ajoute une IA : nom, fournisseur, modèle (facultatif), rôle (facultatif : « Audit », « Conception »…).
+- **●** met une IA en pause, **✎** la modifie.
+- **Libre / Ciblée / Coordonnée** :
+  - *Libre* : toutes les IA actives répondent ;
+  - *Ciblée* : seules les IA mentionnées avec `@Nom` répondent ;
+  - *Coordonnée* : un coordinateur répond d'abord, puis les autres.
+- **Tours** : nombre d'échanges successifs entre les IA (1 à 3).
+
+**Contexte** (repliable)
+- **Importer un document** : PDF, Word (.docx), Excel (.xlsx), texte, Markdown, CSV ou JSON, 6 Mo maximum. Le texte est extrait sur votre machine.
+- **＋** ajoute une note ou une décision à retenir.
+- Chaque élément est **Privé** par défaut ; cliquez dessus pour le passer en **Partagé** et le transmettre aux IA.
+- **Dépôt GitHub** : après avoir indiqué l'URL d'un dépôt dans *Réglages → Projet*, **↻** liste ses fichiers ; **Voir** puis **Partager avec les IA** ajoute un fichier au contexte (lecture seule, 8 fichiers et 120 Ko au maximum).
+
+**Atelier de code** (visible si un dépôt est associé, hors mode Web)
+1. **＋ Un fichier** ou **＋ Plusieurs fichiers** (jusqu'à 6) : choisissez l'IA développeuse et les chemins, puis décrivez le changement.
+2. Ouvrez la proposition : différences ligne à ligne et contrôle de syntaxe Python/JSON.
+3. **Auditer** avec une autre IA. Un avis favorable est obligatoire pour publier.
+4. **Créer une PR brouillon** : une nouvelle branche `suxenai/…` est créée, sans jamais de fusion automatique. Le bouton *État des tests GitHub* affiche le résultat de la CI du dépôt.
+
+L'atelier nécessite un jeton GitHub (*Réglages → Connexions IA → GitHub*) avec les permissions **Contents** et **Pull requests** en lecture et écriture sur le dépôt concerné.
+
+### Importer vos anciennes conversations
+
+Menu **⋯ → Importer des conversations** :
+
+1. Exportez vos données depuis ChatGPT (*Paramètres → Contrôles des données → Exporter* ; l'archive ZIP est acceptée telle quelle) ou depuis Claude (export JSON).
+2. Sélectionnez le fichier (8 Mo maximum) : un aperçu liste les conversations ; rien n'est importé sans votre sélection.
+3. Cochez celles à garder (100 maximum par import) puis **Importer la sélection**. Chacune devient une discussion du projet.
+
+Seul le texte est importé (ni images, ni pièces jointes). Les exports Gemini et Mistral ne sont pas encore pris en charge.
+
+---
+
+## Réglages
+
+Bouton **⚙ Réglages** en haut à droite :
+
+| Section | Contenu |
+|---|---|
+| **Projet** | Nom, URL du dépôt GitHub, consignes communes envoyées à toutes les IA (par exemple « Réponds en français, sois concis »). |
+| **Connexions IA** | Clés API OpenAI, Anthropic, Mistral et Gemini, jeton GitHub, détection d'Ollama. |
+| **Modèles locaux** | Liste, téléchargement et ajout des modèles Ollama. |
+| **Mémoire** | Si elle est activée, retrouve jusqu'à 5 extraits pertinents des autres discussions du projet et les transmet aux IA. |
+| **Consommation** | Appels et tokens par fournisseur et par modèle, coût estimé selon les tarifs que vous saisissez (ce n'est pas une facture). |
+| **Sauvegarde** | Télécharger une sauvegarde complète (JSON) ou la restaurer sous forme de copies, sans rien écraser. Les clés API n'y figurent jamais. |
+| **À propos** | Version et vérification des mises à jour sur GitHub. |
+
+---
+
+## Confidentialité et sécurité
+
+- **Tout est local.** Projets, discussions et documents sont stockés dans une base SQLite sur votre ordinateur :
+  - Mac : `~/Library/Application Support/SuxenAI`
+  - Windows : `%APPDATA%\SuxenAI`
+  - version navigateur lancée avec `python3 server.py` : dossier `data/` du dépôt (ou celui indiqué par `SUXENAI_DATA_DIR`).
+- **Clés API** : stockées dans le **trousseau macOS** ou le **Gestionnaire d'identification Windows**, jamais dans la base ni dans les sauvegardes, et plus jamais affichées après leur enregistrement.
+- **Ce qui part chez les fournisseurs** : en modes API et Local uniquement, les messages de la discussion, les consignes du projet et les éléments que vous avez explicitement **partagés**. Ne partagez pas de secrets.
+- **Mode Web** : aucun appel automatique. Les sites des IA tournent dans des profils isolés ; SuxenAI ne lit ni leurs pages, ni leurs cookies, ni vos identifiants.
+- **Serveur local** : il n'écoute que sur `127.0.0.1`. Dans l'application de bureau, il exige en plus un jeton aléatoire propre à chaque session. N'exposez jamais la version navigateur sur un réseau.
+- **Atelier de code** : le code proposé n'est jamais exécuté sur votre machine, et l'audit par une IA n'est pas une garantie de sécurité.
+
+Chaque service d'IA reste soumis à ses propres conditions d'utilisation et à ses limites d'abonnement.
+
+---
+
+## Questions fréquentes
+
+**Les IA de mes abonnements peuvent-elles se parler automatiquement ?**
+Non. Les abonnements web n'offrent pas d'accès programmable, et automatiser leurs sites enfreindrait leurs conditions d'utilisation. Pour une collaboration automatique, utilisez le mode API ou Local.
+
+**Une IA ne répond pas.**
+Vérifiez le mode (en Web, les IA de l'équipe sont en pause), la mention *clé requise*, le bouton **●** (pause), et, en mode *Ciblée*, que vous l'avez bien mentionnée avec `@Nom`.
+
+**La connexion Google ne fonctionne pas dans le panneau intégré.**
+Google bloque parfois les navigateurs intégrés. Utilisez **Navigateur externe**, ou connectez-vous avec une adresse e-mail et un mot de passe.
+
+**« Address already in use » au lancement de la version navigateur.**
+Une autre copie de SuxenAI utilise déjà le port 8765. Fermez-la, ou lancez `SUXENAI_PORT=8766 python3 server.py`.
+
+**Où sont mes données ? Comment tout supprimer ?**
+Voir [Confidentialité et sécurité](#confidentialité-et-sécurité). Supprimez le dossier de données, et retirez les clés depuis *Réglages → Connexions IA → Retirer*.
+
+**Les mises à jour sont-elles automatiques ?**
+Non. *Réglages → À propos* indique si une nouvelle version existe ; le téléchargement reste manuel.
+
+---
+
+## Pour les développeurs
+
+### Architecture
+
+```
+server.py            Serveur HTTP local (Python, bibliothèque standard) et base SQLite
+connections.py       Trousseau macOS / Windows, test des connexions
+features_v9.py       Modes Web/API/Local, mémoire, consommation, mises à jour
+web_workspace.py     Préparation et import manuels du mode Web
+repository.py        Lecture d'un dépôt GitHub
+workbench.py, batch.py, github_workflow.py   Atelier de code et pull requests
+importer.py          Import des exports ChatGPT et Claude
+documents_v9.py      Extraction PDF, DOCX, XLSX
+backup_v9.py         Sauvegarde et restauration
+static/              Interface (HTML, JavaScript sans framework, suxen.css)
+desktop/             Application Electron (vues Chromium isolées)
+tests/               Tests Python
+```
+
+### Lancer les tests
+
+```bash
+python3 -m unittest discover -s tests -v
+```
+
+### Compiler l'application de bureau
+
+Nécessite Python 3.12+, Node.js 24 et pnpm 11.
+
+```bash
 python -m pip install pyinstaller certifi pypdf
 python -m PyInstaller --noconfirm --onedir --console --name backend --add-data 'static:static' --distpath desktop-build --workpath desktop-build/work --specpath . server.py
 pnpm --dir desktop install --frozen-lockfile
@@ -20,135 +290,23 @@ pnpm --dir desktop test
 pnpm --dir desktop package
 ```
 
-Les projets sont enregistrés dans le dossier utilisateur SuxenAI ; les clés sont gérées par le trousseau macOS ou le Gestionnaire d'identification Windows. L'édition navigateur locale reste disponible via `python server.py`.
+Le résultat se trouve dans `desktop-release/`. Le workflow GitHub Actions **Desktop Chromium**, à lancer depuis l'onglet Actions (*Run workflow*), produit les archives Mac Apple Silicon, Mac Intel et Windows x64.
 
-**Édition Graphite :** interface futuriste en gris anthracite et acier, accent cyan limité aux signaux et actions importantes, nuances violettes discrètes. Les possibilités de la v1.0 sont conservées.
+### Variables d'environnement
 
-## Nouveautés v1.0 — espace multi-IA
+| Variable | Rôle |
+|---|---|
+| `SUXENAI_PORT` | Port du serveur (`8765` par défaut) |
+| `SUXENAI_DATA_DIR` | Dossier des données |
+| `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `MISTRAL_API_KEY`, `GEMINI_API_KEY`, `GITHUB_TOKEN` | Clés fournies par l'environnement (prioritaires sur le trousseau) |
+| `OLLAMA_URL` | Adresse d'Ollama (`http://127.0.0.1:11434` par défaut) |
 
-- Trois modes de travail par projet : **Web** (transfert manuel avec les sites officiels et les abonnements existants), **API** (automatisation avec des clés), **Local** (Ollama, sans crédits API).
-- Mode Web : ouverture de ChatGPT, Claude, Gemini et Le Chat dans des onglets indépendants du navigateur système. Préparation locale d'une demande, aperçu avec contexte optionnel, copie explicite et import manuel d'une réponse avec sa provenance. Aucun accès aux sessions, cookies, identifiants ou contenu des onglets par SuxenAI ; aucune injection de prompt automatique. Les fournisseurs conservent leurs propres conditions et limites d'abonnement.
-- Le mode Web bloque les appels automatiques aux fournisseurs par le serveur, y compris l'atelier de code. Le passage en mode API demande une confirmation, car les appels peuvent être facturés.
-- Nouvelle identité visuelle futuriste : palette nocturne cyan/violet, navigation par modes, espace Web en deux étapes et interface adaptative.
+### Contribuer
 
-Le mode Web ouvre les sites officiels dans le navigateur plutôt que dans une iframe : certains fournisseurs bloquent les connexions intégrées. Il ne peut pas faire collaborer automatiquement les modèles des abonnements web. Les échanges restent manuels.
+Les contributions sont les bienvenues : ouvrez une *issue* pour discuter d'une idée, ou une *pull request* accompagnée de tests. L'historique des versions se trouve dans [CHANGELOG.md](CHANGELOG.md).
 
-## Nouveautés v0.9
-
-- **Outils → Mode IA** : mode local gratuit par projet (bloque les modèles cloud côté serveur), désactivation temporaire des IA non connectées, messages d'erreur quota/clé améliorés.
-- **Outils → Modèles locaux** : détection d'Ollama, liste des modèles installés, téléchargement explicite et ajout à la discussion. Ollama doit être installé et démarré séparément.
-- **Outils → Consommation** : appels et tokens rapportés par chaque fournisseur, estimations USD sur les tarifs saisis par modèle. Les tarifs inconnus sont signalés, aucun prix inventé.
-- **Documents & mémoire** : extraction locale PDF, DOCX, XLSX et texte (6 Mo par fichier, texte limité à 80 Ko, PDF 100 pages maximum). Pas d'OCR, de macros ni de calcul de formules. Les documents restent privés par défaut.
-- Mémoire intelligente optionnelle, recherche locale par mots dans les anciennes discussions du même projet, recherche globale et mode concentration.
-- Atelier : jusqu'à six fichiers existants ou nouveaux, chemins nouveaux explicitement sélectionnés ; vérification de non-écrasement avant publication, audit et confirmation conservés.
-- Sauvegarde JSON de tous les projets, conversations, équipes, documents, historique d'atelier et consommation. Restauration en copies sans écraser les données, propositions restaurées en archive, dépôt à reconnecter et partage/rappel désactivés. Les clés API sont exclues.
-- Recherche manuelle ou automatique (sur activation) des nouvelles versions dans GitHub Releases. L'installation automatique reste désactivée tant que les distributions ne sont pas signées/notariées.
-
-Le paquet Mac autonome inclut les dépendances PDF et HTTPS. Pour la version source, installer `pypdf` si la lecture PDF est nécessaire.
-
-## Démarrage simplifié (macOS)
-
-1. Téléchargez et décompressez SuxenAI. Dans le dossier, double-cliquez sur **SuxenAI.app** : le navigateur s'ouvre automatiquement.
-2. Au premier lancement, l'assistant **Connexions IA** permet de créer, coller, enregistrer et tester les clés OpenAI, Claude, Mistral, Gemini et GitHub. Ollama est détecté localement sans clé API.
-3. Ajoutez ensuite vos modèles dans **Équipe IA**. Vous pouvez rouvrir **Connexions IA** en haut à tout moment, remplacer ou retirer une clé. Les clés sont conservées dans le trousseau macOS, pas dans la base de données ; les variables d'environnement existantes restent prioritaires.
-
-Le lanceur inclus dans le code source nécessite Python 3.10+ déjà installé (aucune commande à saisir). Le workflow **macOS app** construit des archives distinctes Intel et Apple Silicon avec Python intégré, téléchargeables depuis GitHub Actions après compilation. Les builds ne sont pas encore signés/notariés pour une distribution publique. Les données d'un nouveau lancement sont enregistrées dans `~/Library/Application Support/SuxenAI` ; le lanceur source conserve un dossier `data` existant.
-
-La vérification des connexions consulte uniquement les listes de modèles (ou le profil GitHub) : aucun message du projet n'est envoyé. Les clés API peuvent être facturées indépendamment des abonnements web. GitHub : la vérification confirme l'authentification, pas toutes les permissions sur un dépôt donné.
-
-## Nouveautés v0.7
-
-- Import/export JSON d'un projet (discussions et documents/mémoire texte). Le dépôt doit être reconnecté manuellement après import ; les éléments restent privés.
-- Documents UTF-8 et mémoire locale partagée sur activation explicite, disponibles dans toutes les discussions du projet.
-- Lots coordonnés de 1 à 6 fichiers existants, audit indépendant et nouvelle proposition de correction après audit négatif.
-- Diff unifié par fichier et vérification statique Python/JSON sans exécution du code proposé. Les autres formats sont signalés comme non vérifiés.
-- Publication explicite en un commit sur une nouvelle branche et PR brouillon, contrôle des versions sources. Aucun merge automatique. Les workflows GitHub existants peuvent exécuter des tests après publication ; aucun test généré n'est lancé sur la machine locale.
-
-Les analyses statiques ne prouvent pas le bon fonctionnement du code. L'exécution isolée de tests générés n'est pas encore prise en charge.
-
-**Une discussion, plusieurs IA, un espace de travail partagé. Aucun coordinateur obligatoire.**
-
-SuxenAI est un prototype gratuit et local, conçu pour réunir plusieurs modèles d'IA dans une conversation unique. Les participants sont configurables (OpenAI, Anthropic, Mistral, Gemini, Ollama) et peuvent recevoir des rôles facultatifs. L'interface est sombre, sobre, responsive.
-
-## Installation
-
-Python 3.10 minimum. Aucune dépendance Python à installer.
-
-```bash
-python3 server.py
-```
-
-Ouvrir `http://127.0.0.1:8765`.
-
-Pour utiliser les modèles réels, utilisez **Connexions IA** sur macOS. Les variables d'environnement `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `MISTRAL_API_KEY`, `GEMINI_API_KEY` restent disponibles en mode avancé ou sur les autres systèmes. Pour Ollama, installez [Ollama](https://ollama.com), puis téléchargez un modèle. L'agent `demo` simule des réponses : il ne peut ni coder ni auditer.
-
-**Important :** ChatGPT Plus et Claude Pro ne fournissent pas automatiquement des clés API. Les connexions web aux abonnements ne sont pas intégrées. L'utilisation des API peut occasionner des frais chez chaque fournisseur.
-
-## Collaboration
-
-- Conversation collective, messages adressables avec `@Nom`, rôles libres et coordinateur facultatif
-- Modes libre, ciblé, coordonné
-- Projets, instructions partagées, branches de conversation, historique SQLite, export JSON
-- Explorateur GitHub en lecture seule ; prévisualisation et sélection des fichiers injectés dans le contexte des modèles
-
-### Atelier de code (v0.5)
-
-1. Associer le dépôt dans les paramètres du projet.
-2. Cliquer sur `+` dans la section **Atelier de code**.
-3. Choisir une IA, le **chemin exact d'un fichier existant**, puis saisir la modification à réaliser.
-4. L'IA produit une **proposition de contenu complet**, enregistrée en SQLite, sans écriture sur GitHub.
-5. Ouvrir la proposition pour comparer le contenu initial et la nouvelle version.
-6. Lancer un **audit par une autre IA** participante. Un verdict positif est obligatoire pour publier.
-7. **Confirmer manuellement** la création d'une nouvelle branche `suxenai/...` et d'une **pull request brouillon**. Aucune fusion automatique.
-8. Consulter l'état des tests GitHub de la PR. Les tests ne s'exécutent **que si le dépôt cible dispose d'un workflow CI**. Sinon SuxenAI indique explicitement qu'aucun test n'a été détecté.
-
-L'atelier classique travaille sur un fichier par proposition. **Lot multi-fichiers** propose jusqu'à six fichiers existants dans une seule PR. Les agents n'ont pas de terminal ni d'accès direct au système de fichiers. Il n'y a pas d'exécution automatique de code généré sur la machine locale. L'audit est une analyse par IA, pas une garantie de sécurité.
-
-### GitHub privé
-
-Configurez GitHub dans **Connexions IA**. En mode avancé, définir `GITHUB_TOKEN` dans l'environnement du serveur :
-
-```bash
-export GITHUB_TOKEN="VOTRE_JETON"
-python3 server.py
-```
-
-Pour consulter un dépôt privé, le jeton a besoin de la permission **Contents: Read**. Pour publier une PR depuis SuxenAI, il faut **Contents: Read and write** et **Pull requests: Read and write** sur le dépôt cible. Utiliser un jeton à portée minimale, ne jamais le committer et le révoquer s'il fuit.
-
-Les branches `main` et `master` ne peuvent pas être choisies comme branches de publication. Une nouvelle branche dédiée est créée à chaque publication. En cas de panne réseau au milieu d'une publication, une branche orpheline peut subsister : vérifier GitHub avant de réessayer.
-
-### Données transmises aux IA
-
-Les fichiers que vous sélectionnez sont enregistrés localement puis transmis **aux fournisseurs d'IA participants** lors de la génération de réponses. Ils ne doivent pas contenir de secrets ni de données sensibles. Le navigateur de dépôt bloque certains noms de fichiers sensibles, sans prétendre détecter tous les secrets possibles.
-
-L'explorateur accepte jusqu'à 8 fichiers de contexte par projet, 80 Ko par fichier, 120 Ko au total. Ils ne sont pas synchronisés automatiquement après modification du dépôt. Recharger manuellement un fichier pour actualiser son contenu. Les propositions vérifient le SHA initial avant d'écrire, pour empêcher l'écrasement silencieux d'une modification récente.
-
-Le serveur écoute uniquement sur `127.0.0.1` et n'a pas d'authentification. Ne pas l'exposer sur Internet.
-
-
-## v0.6 : importer ses anciennes conversations
-
-La section **Discussions** propose maintenant **Importer des conversations** et **Rechercher**.
-
-1. Exporte les conversations depuis ChatGPT ou Claude en JSON. Pour ChatGPT, une archive ZIP contenant `conversations.json` est acceptée.
-2. Choisis le projet SuxenAI de destination et ouvre **Importer des conversations**.
-3. Sélectionne un fichier JSON ou ZIP (8 Mo maximum) : une **prévisualisation locale** affiche titres, origine et nombre de messages.
-4. Coche les conversations à conserver (jusqu'à 100 par import), puis valide.
-5. Chaque conversation devient un fil distinct rattaché au projet choisi. L'auteur est identifié (Vous, ChatGPT ou Claude), et l'origine de l'import reste stockée en SQLite.
-6. Le bouton **Rechercher** permet une recherche textuelle dans les conversations d'un projet.
-
-Les échanges importés ne sont pas transmis aux fournisseurs pendant l'import ou l'aperçu. Ils peuvent toutefois faire partie du contexte envoyé lorsque tu **lances ensuite une nouvelle réponse d'IA dans le fil importé**. Aucune importation n'est automatique.
-
-**Limites :** import textuel uniquement ; pas de transfert des pièces jointes, des images, de la mémoire interne des fournisseurs ou des métadonnées complètes de projets. Les exports sont de formats évolutifs : les formats non reconnus provoquent un message d'erreur, pas un import fictif. L'import d'exports Gemini et Mistral n'est pas encore implémenté. Certains exports volumineux devront être scindés avant import.
-
-## Tests du logiciel SuxenAI
-
-```bash
-python3 -m unittest discover -s tests -v
-```
-
-Les workflows GitHub Actions du **projet cible** sont distincts des tests de SuxenAI.
+---
 
 ## Licence
 
-MIT. Voir `LICENSE`.
+[MIT](LICENSE) : libre d'utilisation, de modification et de redistribution.

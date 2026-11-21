@@ -39,7 +39,7 @@
       const c=block('Sauvegarde complète','Projets, discussions, équipes, documents, historique d’atelier et consommation. Les clés API du trousseau sont exclues. Le fichier contient vos textes privés : conservez-le en lieu sûr.');
       c.append(btn('Télécharger une sauvegarde',async()=>download(await api('v9/backup'),'suxenai-backup.json'),'primary'),btn('Restaurer une copie',()=>{$('backupFile').value='';$('backupFile').click()}));
     }else if(tab==='updates'){
-      const c=block('SuxenAI 1.1.0','Logiciel libre (MIT), local et privé. Les nouvelles versions publiées sur GitHub restent des téléchargements manuels.');
+      const c=block('SuxenAI 1.2.0','Logiciel libre (MIT), local et privé. Les nouvelles versions publiées sur GitHub restent des téléchargements manuels.');
       const automatic=el('input');automatic.type='checkbox';automatic.checked=localStorage.getItem('suxenai-auto-updates')==='1';const label=el('label','v9-toggle');label.append(automatic,document.createTextNode('Vérifier automatiquement les versions au démarrage'));automatic.onchange=()=>localStorage.setItem('suxenai-auto-updates',automatic.checked?'1':'0');c.append(label);
       c.append(btn('Vérifier les mises à jour',async()=>{const x=await api('v9/update');c.append(el('p','connection-result',x.available?'Version '+x.latest+' disponible':x.message||'Vous êtes à jour'));const a=el('a','text-link','Ouvrir les versions GitHub ↗');a.href=x.url;a.target='_blank';a.rel='noopener noreferrer';c.append(a)}));
     }
