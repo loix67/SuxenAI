@@ -214,7 +214,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.send(importer.preview(d["content"],d["filename"],d.get("source","auto")));return
             if p=="/api/import/selected":
                 self.send(importer.import_selected(__import__(__name__),d["project"],d["content"],
-                          d["filename"],d["selected"],d.get("source","auto")));return
+                          d["filename"],d["selected"],d.get("source","auto"),d.get("template_chat")));return
             if p=="/api/workbench/propose":
                 ch=require_chat(d["chat"])
                 agent=one("SELECT * FROM agents WHERE id=? AND chat=?",(d["agent"],ch["id"]))
