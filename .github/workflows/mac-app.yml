@@ -2,7 +2,7 @@ name: macOS app
 on:
   workflow_dispatch:
   push:
-    branches: ['feat/connections-v0-8','feat/workspace-v0-9']
+    branches: ['feat/connections-v0-8','feat/workspace-v0-9','feat/web-workspace-v1-0']
 jobs:
   build:
     strategy:

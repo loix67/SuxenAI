@@ -1,4 +1,13 @@
-# SuxenAI v0.9
+# SuxenAI v1.0
+
+## Nouveautés v1.0 — espace multi-IA
+
+- Trois modes de travail par projet : **Web** (transfert manuel avec les sites officiels et les abonnements existants), **API** (automatisation avec des clés), **Local** (Ollama, sans crédits API).
+- Mode Web : ouverture de ChatGPT, Claude, Gemini et Le Chat dans des onglets indépendants du navigateur système. Préparation locale d'une demande, aperçu avec contexte optionnel, copie explicite et import manuel d'une réponse avec sa provenance. Aucun accès aux sessions, cookies, identifiants ou contenu des onglets par SuxenAI ; aucune injection de prompt automatique. Les fournisseurs conservent leurs propres conditions et limites d'abonnement.
+- Le mode Web bloque les appels automatiques aux fournisseurs par le serveur, y compris l'atelier de code. Le passage en mode API demande une confirmation, car les appels peuvent être facturés.
+- Nouvelle identité visuelle futuriste : palette nocturne cyan/violet, navigation par modes, espace Web en deux étapes et interface adaptative.
+
+Le mode Web ouvre les sites officiels dans le navigateur plutôt que dans une iframe : certains fournisseurs bloquent les connexions intégrées. Il ne peut pas faire collaborer automatiquement les modèles des abonnements web. Les échanges restent manuels.
 
 ## Nouveautés v0.9
 

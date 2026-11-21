@@ -21,6 +21,7 @@ import connections
 import features_v9 as v9
 import documents_v9
 import backup_v9
+import web_workspace
 
 BASE = Path(__file__).resolve().parent
 DATA = Path(os.getenv("SUXENAI_DATA_DIR", BASE / "data"))
@@ -56,6 +57,7 @@ def setup():
         CREATE TABLE IF NOT EXISTS import_origins(chat TEXT PRIMARY KEY REFERENCES chats(id),source TEXT NOT NULL,filename TEXT NOT NULL,source_id TEXT NOT NULL,imported TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS workspace_items(id TEXT PRIMARY KEY,project TEXT NOT NULL REFERENCES projects(id),kind TEXT NOT NULL,name TEXT NOT NULL,content TEXT NOT NULL,shared INTEGER NOT NULL DEFAULT 0,created TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS project_preferences(project TEXT PRIMARY KEY REFERENCES projects(id),local_only INTEGER NOT NULL,recall INTEGER NOT NULL);
+        CREATE TABLE IF NOT EXISTS project_web_modes(project TEXT PRIMARY KEY REFERENCES projects(id),enabled INTEGER NOT NULL);
         CREATE TABLE IF NOT EXISTS model_rates(provider TEXT NOT NULL,model TEXT NOT NULL,input_rate REAL NOT NULL,output_rate REAL NOT NULL,PRIMARY KEY(provider,model));
         CREATE TABLE IF NOT EXISTS api_usage(id TEXT PRIMARY KEY,project TEXT NOT NULL REFERENCES projects(id),provider TEXT NOT NULL,model TEXT NOT NULL,input_tokens INTEGER,output_tokens INTEGER,estimated_usd REAL,created TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS change_batches(id TEXT PRIMARY KEY,chat TEXT NOT NULL REFERENCES chats(id),author TEXT NOT NULL REFERENCES agents(id),repo TEXT NOT NULL,instructions TEXT NOT NULL,files TEXT NOT NULL,status TEXT NOT NULL,reviewer TEXT NOT NULL,review TEXT NOT NULL,pr_url TEXT NOT NULL,created TEXT NOT NULL);
@@ -194,6 +196,7 @@ class Handler(BaseHTTPRequestHandler):
             if not self.local_host():self.send({'error':'Hôte non autorisé'},403);return
             p=urlparse(self.path); q=parse_qs(p.query)
             if p.path=="/api/health":self.send({'app':'SuxenAI','version':v9.VERSION});return
+            if p.path=="/api/v10/web/providers":self.send({'providers':web_workspace.provider_list()});return
             if p.path=="/api/v9/preferences":self.send(v9.policy(__import__(__name__),q.get('project',[''])[0]));return
             if p.path=="/api/v9/usage":self.send({'usage':v9.usage_report(__import__(__name__),q.get('project',[''])[0]),'rates':query('SELECT * FROM model_rates')});return
             if p.path=="/api/v9/models":self.send({'models':v9.local_models()});return
@@ -275,6 +278,9 @@ class Handler(BaseHTTPRequestHandler):
             origin=self.headers.get("Origin")
             if origin and origin not in (f"http://127.0.0.1:{PORT}",f"http://localhost:{PORT}"):raise ValueError("Origine non autorisée")
             p=urlparse(self.path).path; d=self.body()
+            if p=="/api/v10/mode":v9.set_mode(__import__(__name__),d['project'],d['mode']);self.send({'ok':True});return
+            if p=="/api/v10/web/prepare":self.send({'prompt':web_workspace.prepare_prompt(__import__(__name__),d['chat'],d['text'],d.get('include_history',False))});return
+            if p=="/api/v10/web/response":web_workspace.save_manual_response(__import__(__name__),d['chat'],d['provider'],d['content']);self.send({'ok':True});return
             if p=="/api/v9/preferences":v9.set_policy(__import__(__name__),d['project'],d.get('local_only'),d.get('recall'));self.send({'ok':True});return
             if p=="/api/v9/rate":v9.save_rate(__import__(__name__),d['provider'],d['model'],d['input_rate'],d['output_rate']);self.send({'ok':True});return
             if p=="/api/v9/pull":

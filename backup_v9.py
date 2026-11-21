@@ -2,7 +2,7 @@
 import json
 import re
 
-TABLES=('projects','chats','agents','messages','project_files','import_origins','workspace_items','change_batches','proposals','project_preferences','api_usage','model_rates')
+TABLES=('projects','chats','agents','messages','project_files','import_origins','workspace_items','change_batches','proposals','project_preferences','api_usage','model_rates','project_web_modes')
 
 
 def export_backup(db):
@@ -13,7 +13,7 @@ def export_backup(db):
 
 def restore_backup(db,payload):
     if not isinstance(payload,dict) or payload.get('format')!='suxenai-backup-v1' or not isinstance(payload.get('tables'),dict):raise ValueError('Sauvegarde SuxenAI invalide')
-    tables=payload['tables']
+    tables=dict(payload['tables']);tables.setdefault('project_web_modes',[])
     if set(tables)!=set(TABLES):raise ValueError('Sauvegarde incomplète')
     if any(not isinstance(rows,list) for rows in tables.values()) or sum(len(rows) for rows in tables.values())>50000:raise ValueError('Sauvegarde trop volumineuse')
     ids={}
@@ -39,6 +39,7 @@ def restore_backup(db,payload):
                 if table=='chats':row['parent']=ref('chats',row['parent'],True);row['coordinator']=ref('agents',row['coordinator'],True) if row['coordinator'] in ids['agents'] else ''
                 if table=='workspace_items':row['shared']=0
                 if table=='project_preferences':row['recall']=0;row['local_only']=1
+                if table=='project_web_modes':row['enabled']=0
                 if table in ('change_batches','proposals'):
                     row['author']=ref('agents',row['author']);row['reviewer']=ref('agents',row['reviewer'],True) if row['reviewer'] in ids['agents'] else ''
                     row['status']='archived'

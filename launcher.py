@@ -25,6 +25,8 @@ def main():
             assert server.one('SELECT id FROM projects')
             assert (server.STATIC/'connections.js').is_file()
             assert (server.STATIC/'features.js').is_file()
+            assert (server.STATIC/'future.css').is_file()
+            assert (server.STATIC/'web-workspace.js').is_file()
             import pypdf
             assert (server.STATIC/'index.html').is_file()
             server.connections.MacKeychain()  # load native API only; no keychain access

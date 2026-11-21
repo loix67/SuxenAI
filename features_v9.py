@@ -6,21 +6,37 @@ import urllib.error
 import urllib.request
 import connections
 
-VERSION='0.9'
+VERSION='1.0'
 LOCAL_PROVIDERS={'ollama','demo'}
 
 
 def policy(db,pid):
-    return db.one('SELECT * FROM project_preferences WHERE project=?',(pid,)) or {'project':pid,'local_only':0,'recall':0}
+    p=db.one('SELECT * FROM project_preferences WHERE project=?',(pid,)) or {'project':pid,'local_only':0,'recall':0}
+    web=db.one('SELECT enabled FROM project_web_modes WHERE project=?',(pid,))
+    p['mode']='web' if web and web['enabled'] else 'local' if p['local_only'] else 'api'
+    return p
 
 
 def set_policy(db,pid,local_only,recall):
     if not db.one('SELECT id FROM projects WHERE id=?',(pid,)):raise ValueError('Projet introuvable')
-    db.write('INSERT OR REPLACE INTO project_preferences VALUES(?,?,?)',(pid,int(local_only is True),int(recall is True)))
+    with db.LOCK,db.connection() as con:
+        con.execute('INSERT OR REPLACE INTO project_preferences VALUES(?,?,?)',(pid,int(local_only is True),int(recall is True)))
+        if local_only is True:con.execute('INSERT OR REPLACE INTO project_web_modes VALUES(?,0)',(pid,))
+
+
+def set_mode(db,pid,mode):
+    if mode not in ('web','api','local'):raise ValueError('Mode inconnu')
+    if not db.one('SELECT id FROM projects WHERE id=?',(pid,)):raise ValueError('Projet introuvable')
+    with db.LOCK,db.connection() as con:
+        previous=con.execute('SELECT recall FROM project_preferences WHERE project=?',(pid,)).fetchone()
+        con.execute('INSERT OR REPLACE INTO project_preferences VALUES(?,?,?)',(pid,int(mode=='local'),previous['recall'] if previous else 0))
+        con.execute('INSERT OR REPLACE INTO project_web_modes VALUES(?,?)',(pid,int(mode=='web')))
 
 
 def provider_allowed(db,pid,provider):
-    if policy(db,pid)['local_only'] and provider not in LOCAL_PROVIDERS:return False
+    p=policy(db,pid)
+    if p['mode']=='web':return False
+    if p['local_only'] and provider not in LOCAL_PROVIDERS:return False
     if provider in LOCAL_PROVIDERS:return True
     return provider in connections.ENV and provider!='github' and connections.status(provider)['configured']
 

@@ -46,5 +46,5 @@
   function close(){dialog.querySelectorAll('input[type=password]').forEach(i=>i.value='');try{localStorage.setItem('suxenai-onboarding-v8','1')}catch{}dialog.close();}
   $('openConnections').onclick=open;$('closeConnections').onclick=close;$('skipConnections').onclick=close;$('finishConnections').onclick=close;
   dialog.addEventListener('cancel',e=>{e.preventDefault();close()});
-  try{if(!localStorage.getItem('suxenai-onboarding-v8'))open()}catch{}
+  // In v1.0 the three modes are visible immediately; connecting APIs is optional.
 })();
