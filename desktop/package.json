@@ -3,6 +3,8 @@
   "productName": "SuxenAI",
   "version": "1.2.0",
   "description": "SuxenAI desktop workspace with isolated Chromium views",
+  "author": "SuxenAI contributors",
+  "license": "MIT",
   "main": "main.cjs",
   "private": true,
   "scripts": {
