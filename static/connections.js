@@ -19,7 +19,7 @@
     for(const [id,name,description,url] of providers){
       const card=el('section','connection-card');
       const head=el('div','connection-card-head'),title=el('div');title.append(el('h3','',name),el('p','',description));
-      const info=status[id]||{};const badge=el('span','connection-badge',id==='ollama'?'Local':info.configured?'Clé enregistrée':info.source==='locked'?'Trousseau verrouillé':'Non connecté');
+      const info=status[id]||{};const badge=el('span','connection-badge',id==='ollama'?'Local':info.configured?'Clé enregistrée':info.source==='locked'?'Coffre verrouillé':'Non connecté');
       if(info.configured)badge.classList.add('connected');head.append(title,badge);card.append(head);
       const link=el('a','text-link',id==='ollama'?'Installer Ollama ↗':'Obtenir une clé ↗');link.href=url;link.target='_blank';link.rel='noopener noreferrer';card.append(link);
       if(id==='github')card.append(el('p','connection-help','Jeton à accès limité : dépôts choisis, Contents et Pull requests selon les besoins.'));
@@ -34,7 +34,7 @@
         save.onclick=async()=>{if(!input.value.trim())return setResult(result,'Collez votre clé.','error');save.disabled=true;try{await api('connections/save',{provider:id,secret:input.value});input.value='';await update();await refresh();}catch(e){setResult(result,e.message,'error')}finally{input.value='';save.disabled=false}};
         actions.append(save);
         if(info.configured&&info.source==='keychain'){
-          const remove=el('button','ghost','Retirer');remove.onclick=async()=>{if(!confirm('Retirer la clé de '+name+' du trousseau local ?'))return;remove.disabled=true;try{await api('connections/remove',{provider:id});await update();await refresh()}catch(e){setResult(result,e.message,'error')}finally{remove.disabled=false}};actions.append(remove);
+          const remove=el('button','ghost','Retirer');remove.onclick=async()=>{if(!confirm('Retirer la clé de '+name+' du coffre local ?'))return;remove.disabled=true;try{await api('connections/remove',{provider:id});await update();await refresh()}catch(e){setResult(result,e.message,'error')}finally{remove.disabled=false}};actions.append(remove);
         }
       }
       const test=el('button','ghost',id==='ollama'?'Détecter Ollama':'Tester');test.onclick=async()=>{test.disabled=true;setResult(result,'Vérification…');try{const data=await api('connections/test',{provider:id});setResult(result,'Connexion réussie'+(id==='ollama'?(data.models.length?' · '+data.models.join(', '):' · aucun modèle installé'):'')+'.','success');if(id==='ollama')badge.textContent='Détecté';}catch(e){setResult(result,e.message,'error')}finally{test.disabled=false}};actions.append(test);

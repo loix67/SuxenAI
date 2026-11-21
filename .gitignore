@@ -7,3 +7,6 @@ dist/
 build/
 *.spec
 SuxenAI-v*.zip
+node_modules/
+desktop-build/
+desktop-release/

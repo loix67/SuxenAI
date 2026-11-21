@@ -27,6 +27,7 @@ def main():
             assert (server.STATIC/'features.js').is_file()
             assert (server.STATIC/'future.css').is_file()
             assert (server.STATIC/'graphite.css').is_file()
+            assert (server.STATIC/'desktop-controls.js').is_file()
             assert (server.STATIC/'web-workspace.js').is_file()
             import pypdf
             assert (server.STATIC/'index.html').is_file()

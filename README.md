@@ -1,4 +1,26 @@
-# SuxenAI v1.0.1
+# SuxenAI v1.1.0
+
+## Édition desktop Chromium — Mac et Windows
+
+La version Electron affiche le workspace et un ou deux sites officiels d'IA dans la même fenêtre. Dans le mode **Web**, sélectionnez un panneau et cliquez sur ChatGPT, Claude, Gemini ou Le Chat. Les sessions sont conservées dans des profils Chromium distincts. Les connexions non prises en charge (notamment les restrictions de certains fournisseurs d'identité) restent accessibles via le bouton **Navigateur externe**. Aucun prompt automatique, aucune lecture des cookies et aucune extraction des réponses ; la copie et le collage restent manuels.
+
+Le serveur local est limité à la boucle locale et exige un jeton de session aléatoire dans l'édition desktop. Les pages distantes sont isolées, sans Node.js ni accès IPC ; l'accès aux ressources locales, les fenêtres non sollicitées, les permissions Web et les téléchargements sont bloqués. Chaque site reste soumis à ses conditions d'utilisation et à ses propres limites.
+
+Les archives Mac Apple Silicon, Intel et Windows x64 sont produites par le workflow **Desktop Chromium** sur GitHub Actions. Aucun compte développeur Apple, notarisation ou publication dans un store : archives ZIP à décompresser. Les alertes de sécurité de l'OS restent applicables.
+
+### Compiler depuis le dépôt (développeurs)
+
+Python 3.12+, Node.js 24 et pnpm 11 sont requis pour construire le logiciel, pas pour l'utiliser.
+
+```sh
+python -m pip install pyinstaller certifi pypdf
+python -m PyInstaller --noconfirm --onedir --console --name backend --add-data 'static:static' --distpath desktop-build --workpath desktop-build/work --specpath . server.py
+pnpm --dir desktop install --frozen-lockfile
+pnpm --dir desktop test
+pnpm --dir desktop package
+```
+
+Les projets sont enregistrés dans le dossier utilisateur SuxenAI ; les clés sont gérées par le trousseau macOS ou le Gestionnaire d'identification Windows. L'édition navigateur locale reste disponible via `python server.py`.
 
 **Édition Graphite :** interface futuriste en gris anthracite et acier, accent cyan limité aux signaux et actions importantes, nuances violettes discrètes. Les possibilités de la v1.0 sont conservées.
 

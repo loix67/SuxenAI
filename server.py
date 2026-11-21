@@ -7,6 +7,7 @@ import uuid
 import urllib.request
 import urllib.error
 import threading
+import hmac
 from pathlib import Path
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs, quote
@@ -29,6 +30,7 @@ DATA.mkdir(parents=True, exist_ok=True)
 DB = DATA / "suxenai.sqlite3"
 STATIC = BASE / "static"
 HOST, PORT = "127.0.0.1", int(os.getenv("SUXENAI_PORT", "8765"))
+DESKTOP_TOKEN=os.getenv('SUXENAI_DESKTOP_TOKEN','')
 LOCK = threading.RLock()
 DEFAULTS = {"openai":"gpt-4.1-mini","anthropic":"claude-sonnet-4-5","mistral":"mistral-small-latest","gemini":"gemini-2.5-flash","ollama":"llama3.2","demo":"demo"}
 ENV = {k:v for k,v in connections.ENV.items() if k!='github'}
@@ -178,6 +180,8 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self,*args): pass
     def local_host(self):
         return self.headers.get('Host') in (f'127.0.0.1:{PORT}',f'localhost:{PORT}')
+    def desktop_authorized(self):
+        return not DESKTOP_TOKEN or hmac.compare_digest(self.headers.get('X-SuxenAI-Desktop',''),DESKTOP_TOKEN)
     def send(self,obj,status=200):
         body=json.dumps(obj,ensure_ascii=False).encode()
         self.send_response(status)
@@ -194,6 +198,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         try:
             if not self.local_host():self.send({'error':'Hôte non autorisé'},403);return
+            if not self.desktop_authorized():self.send({'error':'Session desktop requise'},403);return
             p=urlparse(self.path); q=parse_qs(p.query)
             if p.path=="/api/health":self.send({'app':'SuxenAI','version':v9.VERSION});return
             if p.path=="/api/v10/web/providers":self.send({'providers':web_workspace.provider_list()});return
@@ -274,6 +279,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         try:
             if not self.local_host():self.send({'error':'Hôte non autorisé'},403);return
+            if not self.desktop_authorized():self.send({'error':'Session desktop requise'},403);return
             if self.headers.get_content_type()!="application/json":raise ValueError("JSON attendu")
             origin=self.headers.get("Origin")
             if origin and origin not in (f"http://127.0.0.1:{PORT}",f"http://localhost:{PORT}"):raise ValueError("Origine non autorisée")

@@ -1,4 +1,4 @@
-"""Provider credentials, stored in the macOS Keychain (not SQLite or logs)."""
+"""Provider credentials in macOS Keychain or Windows Credential Manager."""
 import ctypes as C
 import json
 import os
@@ -70,6 +70,46 @@ class MacKeychain:
             finally:self.cf.CFRelease(item)
 
 
+class WindowsKeychain:
+    """Windows Generic Credentials, per OS user, without process arguments."""
+    def __init__(self):
+        if sys.platform!='win32':raise ValueError('Coffre Windows indisponible.')
+        from ctypes import wintypes as W
+        class Credential(C.Structure):
+            _fields_=[('Flags',W.DWORD),('Type',W.DWORD),('TargetName',W.LPWSTR),('Comment',W.LPWSTR),('LastWritten',W.FILETIME),('CredentialBlobSize',W.DWORD),('CredentialBlob',C.POINTER(C.c_ubyte)),('Persist',W.DWORD),('AttributeCount',W.DWORD),('Attributes',C.c_void_p),('TargetAlias',W.LPWSTR),('UserName',W.LPWSTR)]
+        self.Credential=Credential;self.api=C.WinDLL('advapi32',use_last_error=True)
+        pointer=C.POINTER(Credential)
+        for name,args in {'CredReadW':[W.LPCWSTR,W.DWORD,W.DWORD,C.POINTER(pointer)],'CredWriteW':[pointer,W.DWORD],'CredDeleteW':[W.LPCWSTR,W.DWORD,W.DWORD]}.items():
+            fn=getattr(self.api,name);fn.argtypes=args;fn.restype=W.BOOL
+        self.api.CredFree.argtypes=[C.c_void_p];self.api.CredFree.restype=None
+
+    def target(self,provider):return SERVICE.decode()+'.'+provider
+    def get(self,provider):
+        value=C.POINTER(self.Credential)()
+        if not self.api.CredReadW(self.target(provider),1,0,C.byref(value)):
+            if C.get_last_error()==1168:return ''
+            raise ValueError('Accès au coffre Windows refusé.')
+        try:return C.string_at(value.contents.CredentialBlob,value.contents.CredentialBlobSize).decode('utf-8')
+        finally:self.api.CredFree(value)
+
+    def set(self,provider,secret):
+        raw=secret.encode();buf=(C.c_ubyte*len(raw)).from_buffer_copy(raw)
+        if len(raw)>2560:raise ValueError('Clé trop longue pour le coffre Windows.')
+        cred=self.Credential();cred.Type=1;cred.TargetName=self.target(provider);cred.CredentialBlobSize=len(raw);cred.CredentialBlob=C.cast(buf,C.POINTER(C.c_ubyte));cred.Persist=2;cred.UserName='SuxenAI'
+        try:
+            if not self.api.CredWriteW(C.byref(cred),0):raise ValueError('Enregistrement dans le coffre Windows refusé.')
+        finally:C.memset(buf,0,len(raw))
+
+    def delete(self,provider):
+        if not self.api.CredDeleteW(self.target(provider),1,0) and C.get_last_error()!=1168:raise ValueError('Suppression du coffre Windows refusée.')
+
+
+def credential_store():
+    if sys.platform=='darwin':return MacKeychain()
+    if sys.platform=='win32':return WindowsKeychain()
+    raise ValueError('Coffre système indisponible : utilisez les variables d’environnement.')
+
+
 def validate_provider(provider):
     if not isinstance(provider,str) or provider not in ENV:raise ValueError('Fournisseur inconnu.')
     return provider
@@ -79,14 +119,14 @@ def key(provider):
     validate_provider(provider)
     env=os.getenv(ENV[provider],'').strip()
     if env:return env
-    if sys.platform!='darwin':return ''
-    with LOCK:return MacKeychain().get(provider)
+    if sys.platform not in ('darwin','win32'):return ''
+    with LOCK:return credential_store().get(provider)
 
 
 def status(provider):
     validate_provider(provider)
     if os.getenv(ENV[provider],'').strip():return {'configured':True,'source':'environment'}
-    try:return {'configured':bool(key(provider)),'source':'keychain' if sys.platform=='darwin' else 'unavailable'}
+    try:return {'configured':bool(key(provider)),'source':'keychain' if sys.platform in ('darwin','win32') else 'unavailable'}
     except ValueError:return {'configured':False,'source':'locked'}
 
 
@@ -96,12 +136,12 @@ def save(provider, secret):
     secret=secret.strip()
     if not 8<=len(secret)<=4096 or any(ord(c)<33 or ord(c)>126 for c in secret):
         raise ValueError('Clé invalide : coller uniquement le jeton.')
-    with LOCK:MacKeychain().set(provider,secret)
+    with LOCK:credential_store().set(provider,secret)
 
 
 def remove(provider):
     validate_provider(provider)
-    with LOCK:MacKeychain().delete(provider)
+    with LOCK:credential_store().delete(provider)
 
 
 class NoRedirect(urllib.request.HTTPRedirectHandler):
