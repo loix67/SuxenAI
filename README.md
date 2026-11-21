@@ -1,4 +1,14 @@
-# SuxenAI v0.6
+# SuxenAI v0.7
+
+## Nouveautés v0.7
+
+- Import/export JSON d'un projet (discussions et documents/mémoire texte). Le dépôt doit être reconnecté manuellement après import ; les éléments restent privés.
+- Documents UTF-8 et mémoire locale partagée sur activation explicite, disponibles dans toutes les discussions du projet.
+- Lots coordonnés de 1 à 6 fichiers existants, audit indépendant et nouvelle proposition de correction après audit négatif.
+- Diff unifié par fichier et vérification statique Python/JSON sans exécution du code proposé. Les autres formats sont signalés comme non vérifiés.
+- Publication explicite en un commit sur une nouvelle branche et PR brouillon, contrôle des versions sources. Aucun merge automatique. Les workflows GitHub existants peuvent exécuter des tests après publication ; aucun test généré n'est lancé sur la machine locale.
+
+Les analyses statiques ne prouvent pas le bon fonctionnement du code. Les documents bureautiques binaires, la création de nouveaux fichiers dans les lots et l'exécution isolée de tests générés ne sont pas encore pris en charge.
 
 **Une discussion, plusieurs IA, un espace de travail partagé. Aucun coordinateur obligatoire.**
 

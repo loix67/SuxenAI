@@ -158,6 +158,7 @@ async function workbenchDetail(id){
   const body=el('div','preview-body');
   body.append(el('div','preview-path',proposal.path+' · '+proposal.status));
   body.append(el('h3','','Proposition de modification'));
+  body.append(el('div','file-subheading','DIFF · '+proposal.checks.message),el('pre','preview-code',proposal.diff));
   const oldLabel=el('div','file-subheading','FICHIER ORIGINAL');body.append(oldLabel);
   body.append(el('pre','preview-code',proposal.original));
   body.append(el('div','file-subheading','FICHIER PROPOSÉ'));

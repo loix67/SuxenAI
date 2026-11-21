@@ -136,3 +136,30 @@ def ci_status(repo_url, pr_number):
     ]
     return {"sha": sha, "checks": runs, "has_checks": bool(runs),
             "message": ("Aucun test GitHub Actions détecté : configure un workflow CI dans le projet." if not runs else "")}
+
+
+def publish_batch(repo_url, files, branch, title, description):
+    """One atomic commit on a new branch, with immutable base and draft PR."""
+    owner, repo = parse_repo(repo_url)
+    root = '/repos/' + owner + '/' + repo
+    safe_branch(branch)
+    default = github_get(root)['default_branch']
+    head = github_get(root + '/git/ref/heads/' + urllib.parse.quote(default, safe=''))['object']['sha']
+    base = github_get(root + '/git/commits/' + head)['tree']['sha']
+    entries = []
+    for f in files:
+        path = validate_path(f['path'])
+        if path.startswith('.github/'):
+            raise ValueError('Modification des workflows interdite dans un lot')
+        current = github_get(root + '/contents/' + encode_path(path) + '?ref=' + head)
+        if current.get('sha') != f['sha']:
+            raise ValueError('Source modifiée depuis la proposition : ' + path)
+        if f['content'] != f['proposed']:
+            entries.append({'path':path,'mode':'100644','type':'blob','content':safe_content(f['proposed'])})
+    if not entries:
+        raise ValueError('Aucune modification')
+    tree = github_write('POST',root+'/git/trees',{'base_tree':base,'tree':entries})['sha']
+    commit = github_write('POST',root+'/git/commits',{'message':title[:140],'tree':tree,'parents':[head]})['sha']
+    github_write('POST',root+'/git/refs',{'ref':'refs/heads/'+branch,'sha':commit})
+    pr = github_write('POST',root+'/pulls',{'title':title[:140],'head':branch,'base':default,'draft':True,'body':description[:15000],'maintainer_can_modify':False})
+    return {'pr_url':pr['html_url'],'branch':branch,'commit_sha':commit}

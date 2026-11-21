@@ -54,3 +54,5 @@
 .import-item strong{font-size:13px;font-weight:550;color:#dde8e5}
 .import-item small{font-size:11px;color:#a1caba}
 .import-item span{font-size:11px;color:#788e99;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+:root{--diff-add:#9fddc5;--diff-remove:#ffaaa4}
+.diff-add{color:var(--diff-add);background:#15372e}.diff-remove{color:var(--diff-remove);background:#3e2327}
