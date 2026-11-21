@@ -30,3 +30,27 @@
 .workbench-dialog .preview-code{max-height:22vh;min-height:80px}
 .workbench-dialog h3{margin:0;font-size:18px;font-weight:550}
 .workbench-dialog .preview-actions{flex-wrap:wrap;align-items:center}
+
+/* v0.6 archive and search */
+.import-menu{display:grid;gap:7px;margin:0 5px 14px}
+.import-menu .ghost{text-align:left;color:#a0c8be;font-size:11px;padding:11px;border-color:#29423f}
+.import-menu .ghost:hover{background:#1c3632}
+.search-results{max-height:280px;overflow:auto;border-top:1px solid #2b4044;padding-top:7px}
+.search-result{display:grid;gap:5px;padding:10px 9px;border:0;border-bottom:1px solid #283942;background:transparent;color:#c8d8df;text-align:left;width:100%}
+.search-result:hover{background:#1c3033}
+.search-result strong{font-size:11px}
+.search-result small{color:#879ca5;font-size:10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.import-dialog{width:min(800px,calc(100vw - 24px))}
+.import-dialog h3{margin:0;color:#d9e9e5;font-size:20px}
+.import-controls{display:flex;gap:9px;flex-wrap:wrap}
+.import-controls input{flex:1;min-width:170px}
+.import-controls button{font-size:11px}
+.import-items{max-height:53vh;overflow:auto;border:1px solid #2a4144;border-radius:10px}
+.import-item{display:flex;gap:13px;padding:13px;border-bottom:1px solid #26363e;cursor:pointer}
+.import-item:hover{background:#172a2c}
+.import-item[hidden]{display:none}
+.import-item input{accent-color:#9fddc5;align-self:start;margin-top:5px}
+.import-item div{display:flex;flex-direction:column;gap:4px;min-width:0}
+.import-item strong{font-size:13px;font-weight:550;color:#dde8e5}
+.import-item small{font-size:11px;color:#a1caba}
+.import-item span{font-size:11px;color:#788e99;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
