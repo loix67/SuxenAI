@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 from repository import repository_tree, repository_file, MAX_CONTEXT_FILES, MAX_CONTEXT_BYTES
 from github_workflow import publish, ci_status, safe_branch
 import workbench
+import importer
 
 BASE = Path(__file__).resolve().parent
 DATA = Path(os.getenv("SUXENAI_DATA_DIR", BASE / "data"))
@@ -46,6 +47,7 @@ def setup():
         CREATE TABLE IF NOT EXISTS agents(id TEXT PRIMARY KEY,chat TEXT NOT NULL REFERENCES chats(id),name TEXT NOT NULL,provider TEXT NOT NULL,model TEXT NOT NULL,role TEXT NOT NULL DEFAULT '',enabled INTEGER NOT NULL DEFAULT 1);
         CREATE TABLE IF NOT EXISTS messages(id TEXT PRIMARY KEY,chat TEXT NOT NULL REFERENCES chats(id),speaker TEXT NOT NULL,content TEXT NOT NULL,created TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS project_files(project TEXT NOT NULL REFERENCES projects(id),path TEXT NOT NULL,sha TEXT NOT NULL,content TEXT NOT NULL,added TEXT NOT NULL,PRIMARY KEY(project,path));
+        CREATE TABLE IF NOT EXISTS import_origins(chat TEXT PRIMARY KEY REFERENCES chats(id),source TEXT NOT NULL,filename TEXT NOT NULL,source_id TEXT NOT NULL,imported TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS proposals(
         id TEXT PRIMARY KEY,chat TEXT NOT NULL REFERENCES chats(id),author TEXT NOT NULL REFERENCES agents(id),
         path TEXT NOT NULL,instructions TEXT NOT NULL,base_sha TEXT NOT NULL,original TEXT NOT NULL,
@@ -147,7 +149,7 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
     def body(self):
         n=int(self.headers.get("Content-Length","0"))
-        if n<0 or n>1024*1024: raise ValueError("Requête trop volumineuse")
+        if n<0 or n>12_000_000: raise ValueError("Requête trop volumineuse")
         return json.loads(self.rfile.read(n) or "{}")
     def do_GET(self):
         try:
@@ -180,6 +182,19 @@ class Handler(BaseHTTPRequestHandler):
                 from urllib.parse import urlparse as parse_url
                 pr_number=int(parse_url(proposed["pr_url"]).path.rstrip("/").split("/")[-1])
                 self.send(ci_status(project["repo"],pr_number));return
+            if p.path=="/api/search":
+                text_query=q.get("q",[""])[0].strip()
+                if len(text_query)<2 or len(text_query)>160:raise ValueError("Recherche de 2 à 160 caractères")
+                pid=q.get("project",[""])[0]
+                if not one("SELECT id FROM projects WHERE id=?",(pid,)):raise ValueError("Projet introuvable")
+                # Escape LIKE metacharacters; all text remains bound as a parameter.
+                pattern="%"+text_query.replace("\\","\\\\").replace("%","\\%").replace("_","\\_")+"%"
+                self.send({"results":query("SELECT m.chat,c.title,m.speaker,substr(m.content,1,320) AS excerpt,m.created "
+                    "FROM messages m JOIN chats c ON c.id=m.chat "
+                    "WHERE c.project=? AND m.content LIKE ? ESCAPE '\\' ORDER BY m.rowid DESC LIMIT 80",
+                    (pid,pattern))});return
+            if p.path=="/api/import/origins":
+                self.send({"origins":query("SELECT * FROM import_origins")});return
             if p.path=="/api/messages":
                 self.send({"messages":history(q.get("chat",[""])[0])});return
             if p.path=="/api/export":
@@ -195,6 +210,11 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         try:
             p=urlparse(self.path).path; d=self.body()
+            if p=="/api/import/preview":
+                self.send(importer.preview(d["content"],d["filename"],d.get("source","auto")));return
+            if p=="/api/import/selected":
+                self.send(importer.import_selected(__import__(__name__),d["project"],d["content"],
+                          d["filename"],d["selected"],d.get("source","auto")));return
             if p=="/api/workbench/propose":
                 ch=require_chat(d["chat"])
                 agent=one("SELECT * FROM agents WHERE id=? AND chat=?",(d["agent"],ch["id"]))
