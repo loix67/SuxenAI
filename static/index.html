@@ -7,7 +7,9 @@
   <div class="sidebar-head"><span>ESPACES DE TRAVAIL</span><button class="iconbtn" id="addProject" title="Nouveau projet">＋</button></div>
   <div id="projects" class="projects"></div>
   <div class="sidebar-head chats-head"><span>DISCUSSIONS</span><button class="iconbtn" id="addChat" title="Nouvelle discussion">＋</button></div>
-  <div id="chats" class="chats"></div>
+  <div class="import-menu"><button class="ghost" id="importArchive">↓ Importer des conversations</button><button class="ghost" id="searchArchive">⌕ Rechercher</button></div>
+  <input id="importFile" type="file" accept=".json,.zip,application/json,application/zip" hidden>
+  <div id="chats" class="chats"></div><div id="searchResults" class="search-results" hidden></div>
   <div class="sidebar-bottom"><div class="status-dot"></div><div><strong>Local & privé</strong><small>Les échanges sont enregistrés ici</small></div><button class="iconbtn" id="exportChat" title="Exporter JSON">↥</button></div>
 </aside>
 <main class="main">
@@ -27,7 +29,7 @@
  </div>
  <div class="inspector-section"><div class="side-heading"><strong>Équipe IA</strong><button class="iconbtn" id="addAgent" title="Ajouter une IA">＋</button></div><div id="agents" class="agents"></div><p class="inspector-info">Ajoutez ou retirez des IA à tout moment. Les rôles sont facultatifs.</p></div>
   <div class="inspector-section"><div class="side-heading"><strong>Collaboration</strong></div><div class="mode-pills"><button data-mode="free" class="selected">Libre</button><button data-mode="targeted">Ciblée</button><button data-mode="coordinated">Coordonnée</button></div><div id="coordWrap" hidden><label class="field-label">Coordinateur facultatif</label><select id="coordinator"></select></div><p id="modeDescription" class="inspector-info">Chaque participant répond dans la même conversation, sans chef.</p><label class="field-label">Tours de collaboration</label><select id="rounds"><option value="1">1 tour</option><option value="2">2 tours</option><option value="3">3 tours</option></select></div>
-  <div class="inspector-footer"><span class="subtle">OPEN SOURCE · MIT</span><span>VERSION 0.5</span></div>
+  <div class="inspector-footer"><span class="subtle">OPEN SOURCE · MIT</span><span>VERSION 0.6</span></div>
 </aside>
 </div></main></div>
 <dialog id="dialog"><form method="dialog" id="dialogForm"><div class="dialog-top"><h2 id="dialogTitle">Configuration</h2><button class="iconbtn" value="cancel">✕</button></div><div id="dialogFields"></div><div class="dialog-actions"><button value="cancel" class="ghost">Annuler</button><button id="dialogSave" value="default" class="primary">Enregistrer</button></div></form></dialog>
