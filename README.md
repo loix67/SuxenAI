@@ -1,4 +1,4 @@
-# SuxenAI v0.5
+# SuxenAI v0.6
 
 **Une discussion, plusieurs IA, un espace de travail partagé. Aucun coordinateur obligatoire.**
 
@@ -58,6 +58,22 @@ Les fichiers que vous sélectionnez sont enregistrés localement puis transmis *
 L'explorateur accepte jusqu'à 8 fichiers de contexte par projet, 80 Ko par fichier, 120 Ko au total. Ils ne sont pas synchronisés automatiquement après modification du dépôt. Recharger manuellement un fichier pour actualiser son contenu. Les propositions vérifient le SHA initial avant d'écrire, pour empêcher l'écrasement silencieux d'une modification récente.
 
 Le serveur écoute uniquement sur `127.0.0.1` et n'a pas d'authentification. Ne pas l'exposer sur Internet.
+
+
+## v0.6 : importer ses anciennes conversations
+
+La section **Discussions** propose maintenant **Importer des conversations** et **Rechercher**.
+
+1. Exporte les conversations depuis ChatGPT ou Claude en JSON. Pour ChatGPT, une archive ZIP contenant `conversations.json` est acceptée.
+2. Choisis le projet SuxenAI de destination et ouvre **Importer des conversations**.
+3. Sélectionne un fichier JSON ou ZIP (8 Mo maximum) : une **prévisualisation locale** affiche titres, origine et nombre de messages.
+4. Coche les conversations à conserver (jusqu'à 100 par import), puis valide.
+5. Chaque conversation devient un fil distinct rattaché au projet choisi. L'auteur est identifié (Vous, ChatGPT ou Claude), et l'origine de l'import reste stockée en SQLite.
+6. Le bouton **Rechercher** permet une recherche textuelle dans les conversations d'un projet.
+
+Les échanges importés ne sont pas transmis aux fournisseurs pendant l'import ou l'aperçu. Ils peuvent toutefois faire partie du contexte envoyé lorsque tu **lances ensuite une nouvelle réponse d'IA dans le fil importé**. Aucune importation n'est automatique.
+
+**Limites :** import textuel uniquement ; pas de transfert des pièces jointes, des images, de la mémoire interne des fournisseurs ou des métadonnées complètes de projets. Les exports sont de formats évolutifs : les formats non reconnus provoquent un message d'erreur, pas un import fictif. L'import d'exports Gemini et Mistral n'est pas encore implémenté. Certains exports volumineux devront être scindés avant import.
 
 ## Tests du logiciel SuxenAI
 
