@@ -5,6 +5,17 @@ SuxenAI réunit ChatGPT, Claude, Gemini, Mistral et des modèles locaux (Ollama)
 
 Logiciel libre (licence MIT), gratuit, en français, pour macOS et Windows.
 
+**[⬇ Télécharger](https://github.com/loix67/SuxenAI/releases/latest)** · [Guide d'utilisation](#utiliser-lapplication) · [English](README.en.md)
+
+![Trois IA discutent du lancement d'un café-librairie dans SuxenAI](docs/images/discussion.jpg)
+
+<table>
+<tr>
+<td width="50%"><img src="docs/images/mode-web.jpg" alt="Mode Web : préparer une demande et rapporter la réponse"><br><sub><b>Mode Web</b> : vos abonnements, sans clé API.</sub></td>
+<td width="50%"><img src="docs/images/reglages.jpg" alt="Réglages : connexions aux fournisseurs d'IA"><br><sub><b>Réglages</b> : toutes les options au même endroit.</sub></td>
+</tr>
+</table>
+
 ---
 
 ## Sommaire
