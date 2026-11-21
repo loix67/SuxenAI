@@ -1,0 +1,11 @@
+#!/bin/sh
+# Source-tree launcher. The packaged build includes its own Python runtime.
+set -eu
+ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
+export PATH="/opt/homebrew/bin:/usr/local/bin:/Library/Frameworks/Python.framework/Versions/Current/bin:/usr/bin:/bin"
+for candidate in /Library/Frameworks/Python.framework/Versions/Current/bin/python3 /opt/homebrew/bin/python3 /usr/local/bin/python3 /usr/bin/python3; do
+    if [ -x "$candidate" ] && "$candidate" -c 'import sys; sys.exit(sys.version_info < (3,10))' 2>/dev/null; then
+        exec "$candidate" "$ROOT/launcher.py"
+    fi
+done
+/usr/bin/osascript -e 'display alert "SuxenAI" message "Installez Python 3.10 ou supérieur depuis python.org, ou téléchargez la version autonome de SuxenAI."'

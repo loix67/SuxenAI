@@ -1,0 +1,64 @@
+name: Desktop Chromium
+on:
+  workflow_dispatch:
+  push:
+    branches: ['feat/chromium-v1-1']
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            arch: arm64
+            target: Mac-Apple-Silicon
+          - runner: macos-15-intel
+            arch: x64
+            target: Mac-Intel
+          - runner: windows-latest
+            arch: x64
+            target: Windows-x64
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          architecture: ${{ matrix.arch }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          architecture: ${{ matrix.arch }}
+      - run: python -m pip install 'pyinstaller==6.22.3' certifi 'pypdf==7.1.1'
+      - run: python -m unittest discover -s tests -v
+      - run: python -m PyInstaller --noconfirm --onedir --console --name backend --add-data 'static:static' --distpath desktop-build --workpath desktop-build/work --specpath . server.py
+      - run: npm install -g pnpm@11.25.0
+      - run: pnpm --dir desktop install --frozen-lockfile
+      - run: pnpm --dir desktop exec install-electron
+      - run: pnpm --dir desktop test
+      - run: pnpm --dir desktop package
+      - name: Verify and zip macOS
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          APP="desktop-release/SuxenAI-darwin-${{ matrix.arch }}/SuxenAI.app"
+          codesign --force --deep --sign - "$APP"
+          SUXENAI_DATA_DIR="$RUNNER_TEMP/suxenai-smoke" "$APP/Contents/MacOS/SuxenAI" --self-test
+          ditto -c -k --sequesterRsrc --keepParent "$APP" "SuxenAI-${{ matrix.target }}.zip"
+      - name: Verify and zip Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $appDir = "desktop-release/SuxenAI-win32-${{ matrix.arch }}"
+          $env:SUXENAI_DATA_DIR = Join-Path $env:RUNNER_TEMP 'suxenai-smoke'
+          $result = Start-Process -FilePath "$appDir/SuxenAI.exe" -ArgumentList '--self-test' -Wait -PassThru
+          if ($result.ExitCode -ne 0) { throw 'Desktop smoke test failed' }
+          Compress-Archive -Path "$appDir/*" -DestinationPath "SuxenAI-${{ matrix.target }}.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SuxenAI-${{ matrix.target }}
+          path: SuxenAI-${{ matrix.target }}.zip
