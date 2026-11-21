@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SuxenAI — Collaborative intelligence</title><link rel="stylesheet" href="/style.css"></head>
+<body><div class="shell">
+<aside class="sidebar">
+  <div class="brand"><div class="mark"><span></span><span></span><span></span></div><div><strong>Suxen<span>AI</span></strong><small>COLLABORATIVE INTELLIGENCE</small></div></div>
+  <div class="sidebar-head"><span>ESPACES DE TRAVAIL</span><button class="iconbtn" id="addProject" title="Nouveau projet">＋</button></div>
+  <div id="projects" class="projects"></div>
+  <div class="sidebar-head chats-head"><span>DISCUSSIONS</span><button class="iconbtn" id="addChat" title="Nouvelle discussion">＋</button></div>
+  <div id="chats" class="chats"></div>
+  <div class="sidebar-bottom"><div class="status-dot"></div><div><strong>Local & privé</strong><small>Les échanges sont enregistrés ici</small></div><button class="iconbtn" id="exportChat" title="Exporter JSON">↥</button></div>
+</aside>
+<main class="main">
+<header class="topbar"><div class="bread"><button id="menu" class="iconbtn mobile">☰</button><span>Workspace</span><i>/</i><strong id="chatTitle">Discussion collective</strong></div><div class="top-actions"><span class="local-pill"><span class="status-dot"></span> LOCAL WORKSPACE</span><button class="ghost" id="branch">⑂ <span>Nouvelle branche</span></button><button class="ghost" id="settings">⚙ <span>Projet</span></button></div></header>
+<div class="workspace">
+<section class="conversation">
+  <div class="welcome" id="intro"><div class="constellation"><span></span><span></span><span></span><span></span><span></span></div><p class="eyebrow">INTELLIGENCE COLLECTIVE</p><h1>Plusieurs esprits.<br><em>Un même dialogue.</em></h1><p>Invitez vos modèles, partagez le contexte et construisez ensemble. Aucun coordinateur imposé.</p></div>
+  <div id="messages" class="messages" aria-live="polite"></div>
+  <div class="composer-outer"><div class="composer"><div class="compose-top"><span class="compose-tag">◉ Discussion partagée</span><span id="modeHint">Les IA peuvent collaborer librement</span></div><textarea id="input" placeholder="Écrire à l'équipe… Utilisez @Nom pour cibler une IA" rows="2"></textarea><div class="compose-footer"><div class="compose-left"><button id="runRound" class="mini" title="Un tour supplémentaire entre IA">↻ Faire réagir les IA</button><span id="sendingStatus"></span></div><button class="send" id="send" title="Envoyer">Envoyer <span>↗</span></button></div></div><p class="privacy">SuxenAI ne donne pas directement accès aux abonnements web. Les API et Ollama sont facultatifs.</p></div>
+</section>
+<aside class="inspector"><div class="inspector-title"><span>SESSION</span><span class="live">● En cours</span></div><div class="project-card"><div class="project-label">PROJET ACTIF</div><strong id="projectName">Premier projet</strong><small id="repoName">Aucun dépôt associé</small><button class="text-link" id="editProject">Configurer le projet ↗</button></div>
+  <div class="inspector-section"><div class="side-heading"><strong>Équipe IA</strong><button class="iconbtn" id="addAgent" title="Ajouter une IA">＋</button></div><div id="agents" class="agents"></div><p class="inspector-info">Ajoutez ou retirez des IA à tout moment. Les rôles sont facultatifs.</p></div>
+  <div class="inspector-section"><div class="side-heading"><strong>Collaboration</strong></div><div class="mode-pills"><button data-mode="free" class="selected">Libre</button><button data-mode="targeted">Ciblée</button><button data-mode="coordinated">Coordonnée</button></div><div id="coordWrap" hidden><label class="field-label">Coordinateur facultatif</label><select id="coordinator"></select></div><p id="modeDescription" class="inspector-info">Chaque participant répond dans la même conversation, sans chef.</p><label class="field-label">Tours de collaboration</label><select id="rounds"><option value="1">1 tour</option><option value="2">2 tours</option><option value="3">3 tours</option></select></div>
+  <div class="inspector-footer"><span class="subtle">OPEN SOURCE · MIT</span><span>VERSION 0.2</span></div>
+</aside>
+</div></main></div>
+<dialog id="dialog"><form method="dialog" id="dialogForm"><div class="dialog-top"><h2 id="dialogTitle">Configuration</h2><button class="iconbtn" value="cancel">✕</button></div><div id="dialogFields"></div><div class="dialog-actions"><button value="cancel" class="ghost">Annuler</button><button id="dialogSave" value="default" class="primary">Enregistrer</button></div></form></dialog>
+<div class="toast" id="toast" role="status"></div><script src="/app.js"></script></body></html>
