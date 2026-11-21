@@ -112,4 +112,106 @@ render=function(){
   attachedFiles();
 };
 
+
+// v0.5: collaborative development workbench. No implicit GitHub modifications.
+async function workbenchRefresh(){
+  const target=$('proposalList');if(!target||!chatId)return;
+  const cid=chatId;
+  try{
+    const result=await api('workbench/proposals?chat='+encodeURIComponent(cid));
+    if(cid!==chatId)return;
+    target.replaceChildren();
+    if(!result.proposals.length){
+      target.append(el('p','inspector-info','Aucune modification proposée.'));return;
+    }
+    for(const p of result.proposals){
+      const row=el('button','proposal-row');
+      const first=el('div','proposal-row-title');
+      first.append(el('span','',p.path),el('span','state-'+p.status,p.status));
+      row.append(first,el('small','',p.instructions.slice(0,90)));
+      row.onclick=()=>workbenchDetail(p.id);
+      target.append(row);
+    }
+  }catch(e){toast(e.message)}
+}
+$('newProposal').onclick=()=>{
+  if(!chatId||!activeProject()?.repo)return toast('Associe un dépôt GitHub au projet');
+  const available=members().filter(a=>a.enabled&&a.provider!=='demo');
+  if(!available.length)return toast('Ajoute une IA réelle, avec API ou Ollama');
+  const selectedFiles=repositoryCache;
+  const fields=[
+    {key:'agent',label:'IA qui propose la modification',type:'select',options:available.map(a=>[a.id,a.name+' · '+a.provider])},
+    {key:'path',label:'Chemin exact du fichier du dépôt',value:selectedFiles[0]?.path||''},
+    {key:'instructions',label:'Fonction à coder / changement demandé',type:'textarea'}
+  ];
+  openDialog('Proposer une modification',fields,async d=>{
+    if(!d.instructions.trim())throw Error('Précise la modification à réaliser');
+    await api('workbench/propose',{chat:chatId,...d});
+    await workbenchRefresh();await loadMessages();
+  });
+};
+async function workbenchDetail(id){
+  let proposal;
+  try{proposal=(await api('workbench/proposal?id='+encodeURIComponent(id))).proposal}
+  catch(e){return toast(e.message)}
+  const d=document.createElement('dialog');d.className='preview-dialog workbench-dialog';
+  const body=el('div','preview-body');
+  body.append(el('div','preview-path',proposal.path+' · '+proposal.status));
+  body.append(el('h3','','Proposition de modification'));
+  const oldLabel=el('div','file-subheading','FICHIER ORIGINAL');body.append(oldLabel);
+  body.append(el('pre','preview-code',proposal.original));
+  body.append(el('div','file-subheading','FICHIER PROPOSÉ'));
+  body.append(el('pre','preview-code',proposal.content));
+  if(proposal.review){body.append(el('div','file-subheading','AUDIT INDÉPENDANT'),el('pre','review-report',proposal.review))}
+  const actions=el('div','preview-actions');
+  const close=el('button','ghost','Fermer');close.onclick=()=>d.close();actions.append(close);
+  const auditCandidates=members().filter(a=>a.enabled&&a.provider!=='demo'&&a.id!==proposal.author);
+  if(proposal.status!=='published'&&auditCandidates.length){
+    const selector=el('select','field');
+    selector.style.maxWidth='180px';
+    for(const a of auditCandidates)selector.add(new Option('Audit : '+a.name,a.id));
+    const button=el('button','ghost','Auditer');
+    button.onclick=async()=>{
+      button.disabled=true;
+      try{
+        await api('workbench/review',{id,reviewer:selector.value});
+        d.close();await workbenchRefresh();await loadMessages();
+        toast('Audit enregistré : consulter le verdict');
+      }catch(e){toast(e.message)}finally{button.disabled=false}
+    };
+    actions.append(selector,button);
+  }
+  if(proposal.status==='approved'&&proposal.reviewer){
+    const publishButton=el('button','primary','Créer une PR brouillon');
+    publishButton.onclick=()=>{
+      const name='suxenai/'+id.slice(0,8);
+      if(!confirm('Publier cette proposition sur une NOUVELLE branche GitHub '+name+' et ouvrir une pull request BROUILLON ? Aucun merge automatique.'))return;
+      publishButton.disabled=true;
+      api('workbench/publish',{id,branch:name,title:'SuxenAI: '+proposal.path,confirm:'PUBLISH_DRAFT_PR'})
+        .then(async result=>{
+          d.close();await workbenchRefresh();await loadMessages();
+          toast('Pull request créée : '+result.pr_url);
+          window.open(result.pr_url,'_blank','noopener');
+        }).catch(e=>toast(e.message)).finally(()=>{publishButton.disabled=false});
+    };
+    actions.append(publishButton);
+  }
+  if(proposal.pr_url){
+    const link=el('a','text-link','Ouvrir la pull request ↗');link.href=proposal.pr_url;link.target='_blank';link.rel='noopener noreferrer';actions.append(link);
+    const ci=el('button','ghost','État des tests GitHub');
+    ci.onclick=async()=>{
+      ci.disabled=true;
+      try{
+        const data=await api('workbench/ci?id='+encodeURIComponent(id));
+        toast(data.has_checks?data.checks.map(c=>c.name+': '+(c.conclusion||c.status)).join(' · '):data.message);
+      }catch(e){toast(e.message)}finally{ci.disabled=false}
+    };actions.append(ci);
+  }
+  body.append(actions);d.append(body);document.body.append(d);
+  d.onclose=()=>d.remove();d.showModal();
+}
+// Wrap the existing renderer once so the workbench follows the active conversation.
+const originalWorkspaceRender=render;
+render=function(){originalWorkspaceRender();workbenchRefresh()};
+
 refresh(false).catch(e=>toast(e.message));
