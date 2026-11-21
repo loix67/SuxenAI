@@ -7,14 +7,13 @@ function activeChat(){return state.chats.find(c=>c.id===chatId)}
 function activeProject(){return state.projects.find(p=>p.id===projectId)}
 function members(){return state.agents.filter(a=>a.chat===chatId)}
 async function refresh(preserve=true){const oldP=projectId,oldC=chatId;state=await api('state');projectId=(preserve&&state.projects.some(p=>p.id===oldP)?oldP:state.projects[0]?.id)||null;chatId=(preserve&&state.chats.some(c=>c.id===oldC&&c.project===projectId)?oldC:state.chats.find(c=>c.project===projectId)?.id)||null;render()}
-function render(){nav($('projects'),state.projects,projectId,'◈',id=>{projectId=id;chatId=state.chats.find(c=>c.project===id)?.id||null;render()});nav($('chats'),state.chats.filter(c=>c.project===projectId),chatId,'⌁',id=>{chatId=id;render()});const p=activeProject(),c=activeChat();$('projectName').textContent=p?.name||'Sans projet';$('repoName').textContent=p?.repo||'Aucun dépôt associé';$('chatTitle').textContent=c?.title||'Nouvelle discussion';const me=members();$('agents').replaceChildren();for(const a of me){const item=el('div','agent');item.append(el('span','agent-icon',a.name.slice(0,2).toUpperCase()));const info=el('div','agent-info');info.append(el('strong','',a.name),el('small','',(a.role||'Sans rôle')+' · '+a.provider));item.append(info);const btn=el('button','',a.enabled?'●':'○');btn.title='Activer / désactiver';btn.onclick=()=>changeAgent(a);item.append(btn);const edit=el('button','','✎');edit.title='Modifier';edit.onclick=()=>editAgent(a);item.append(edit);$('agents').append(item)}const coordinator=$('coordinator');coordinator.replaceChildren(new Option('Aucun coordinateur',''));for(const a of me)coordinator.add(new Option(a.name,a.id));if(c){document.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('selected',b.dataset.mode===c.mode));coordinator.value=c.coordinator||'';$('coordWrap').hidden=c.mode!=='coordinated';setModeHint(c.mode)}loadMessages()}
-function setModeHint(mode){const d={free:'Échange libre entre tous les participants.',targeted:'Les IA mentionnées uniquement répondent.',coordinated:'Le coordinateur intervient en premier.'};$('modeHint').textContent=d[mode]||d.free;$('modeDescription').textContent=d[mode]||d.free}
+function render(){nav($('projects'),state.projects,projectId,'◈',id=>{projectId=id;chatId=state.chats.find(c=>c.project===id)?.id||null;render()});nav($('chats'),state.chats.filter(c=>c.project===projectId),chatId,'⌁',id=>{chatId=id;render()});const p=activeProject(),c=activeChat();$('projectName').textContent=p?.name||'Sans projet';$('chatTitle').textContent=c?.title||'Nouvelle discussion';const me=members();$('agents').replaceChildren();for(const a of me){const item=el('div','agent');item.dataset.provider=a.provider;item.classList.toggle('off',!a.enabled);item.append(el('span','agent-icon',a.name.slice(0,2).toUpperCase()));const info=el('div','agent-info');info.append(el('strong','',a.name),el('small','',[a.role,a.provider].filter(Boolean).join(' · ')));item.append(info);const btn=el('button','toggle',a.enabled?'●':'○');btn.title=a.enabled?'Mettre en pause':'Activer';btn.setAttribute('aria-label',btn.title+' '+a.name);btn.onclick=()=>changeAgent(a);item.append(btn);const edit=el('button','','✎');edit.title='Modifier';edit.setAttribute('aria-label','Modifier '+a.name);edit.onclick=()=>editAgent(a);item.append(edit);$('agents').append(item)}if(!me.length)$('agents').append(el('p','info','Aucune IA. Cliquez sur ＋ pour en inviter une.'));const coordinator=$('coordinator');coordinator.replaceChildren(new Option('Aucun coordinateur',''));for(const a of me)coordinator.add(new Option(a.name,a.id));if(c){document.querySelectorAll('[data-mode]').forEach(b=>b.classList.toggle('selected',b.dataset.mode===c.mode));coordinator.value=c.coordinator||'';$('coordWrap').hidden=c.mode!=='coordinated';setModeHint(c.mode)}loadMessages()}
+function setModeHint(mode){const d={free:'Toutes les IA actives répondent.',targeted:'Seules les IA mentionnées avec @Nom répondent.',coordinated:'Le coordinateur répond en premier, puis les autres.'};$('modeHint').textContent=d[mode]||d.free;$('modeDescription').textContent=d[mode]||d.free}
 async function loadMessages(){if(!chatId){$('messages').replaceChildren();$('intro').hidden=false;return}try{const out=await api('messages?chat='+encodeURIComponent(chatId));$('messages').replaceChildren();$('intro').hidden=out.messages.length>0;for(const m of out.messages){const mine=m.speaker==='Vous';const item=el('div','msg'+(mine?' you':''));item.append(el('div','avatar',mine?'VO':m.speaker.slice(0,2).toUpperCase()));const bubble=el('div','bubble');bubble.append(el('div','speaker',m.speaker),el('div','content',m.content));item.append(bubble);$('messages').append(item)}$('messages').scrollTop=$('messages').scrollHeight}catch(e){toast(e.message)}}
 function openDialog(title,fields,save){$('dialogTitle').textContent=title;$('dialogFields').replaceChildren();for(const f of fields){const wrapper=el('div','form-field');const label=el('label','',f.label);label.htmlFor='f_'+f.key;wrapper.append(label);let input;if(f.type==='textarea'){input=el('textarea','field');input.rows=4}else if(f.type==='select'){input=el('select','field');for(const [value,text] of f.options)input.add(new Option(text,value))}else{input=el('input','field');input.type='text'}input.id='f_'+f.key;if(f.value!==undefined)input.value=f.value;wrapper.append(input);$('dialogFields').append(wrapper)}$('dialog').showModal();const form=$('dialogForm');form.onsubmit=async e=>{e.preventDefault();if(e.submitter?.value==='cancel'){$('dialog').close();return}const data={};for(const f of fields)data[f.key]=$('f_'+f.key).value;const submit=$('dialogSave');if(submit.disabled)return;submit.disabled=true;try{await save(data);$('dialog').close();await refresh()}catch(err){toast(err.message)}finally{submit.disabled=false}}}
 $('addProject').onclick=()=>openDialog('Nouveau projet',[{key:'name',label:'Nom du projet'},{key:'repo',label:'URL GitHub (facultative)'},{key:'instructions',label:'Instructions communes',type:'textarea'}],async d=>{const r=await api('projects',d);projectId=r.id;chatId=null});
-$('editProject').onclick=$('settings').onclick=()=>{const p=activeProject();if(!p)return;openDialog('Configurer le projet',[{key:'name',label:'Nom',value:p.name},{key:'repo',label:'URL GitHub (référence)',value:p.repo},{key:'instructions',label:'Instructions',type:'textarea',value:p.instructions}],d=>api('projects/update',{id:projectId,...d}))};
 $('addChat').onclick=async()=>{if(!projectId)return;try{const r=await api('chats',{project:projectId,title:'Nouvelle discussion'});chatId=r.id;await refresh()}catch(e){toast(e.message)}};
-$('branch').onclick=async()=>{if(!chatId)return;try{const r=await api('chats/branch',{chat:chatId});chatId=r.id;await refresh();toast('Branche créée')}catch(e){toast(e.message)}};
+$('branch').onclick=async()=>{if(!chatId)return;try{const r=await api('chats/branch',{chat:chatId});chatId=r.id;await refresh();toast('Discussion dupliquée')}catch(e){toast(e.message)}};
 $('addAgent').onclick=()=>{if(!chatId)return toast('Crée d’abord une discussion');openDialog('Inviter une IA',[{key:'name',label:'Nom du participant'},{key:'provider',label:'Fournisseur',type:'select',options:state.providers.map(p=>[p.id,p.id+(p.available?'':' · clé requise')])},{key:'model',label:'Nom du modèle (facultatif)'},{key:'role',label:'Spécialité facultative'}],d=>api('agents',{chat:chatId,...d}))};
 function editAgent(a){openDialog('Modifier '+a.name,[{key:'name',label:'Nom',value:a.name},{key:'provider',label:'Fournisseur',type:'select',value:a.provider,options:state.providers.map(p=>[p.id,p.id])},{key:'model',label:'Modèle',value:a.model},{key:'role',label:'Rôle facultatif',value:a.role}],d=>api('agents/update',{...d,id:a.id,enabled:!!a.enabled}))}
 async function changeAgent(a){try{await api('agents/update',{...a,enabled:!a.enabled});await refresh()}catch(e){toast(e.message)}}
@@ -26,6 +25,10 @@ $('input').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();$('
 $('runRound').onclick=()=>teamRun();
 $('exportChat').onclick=async()=>{if(!chatId)return;try{const data=await api('export?chat='+encodeURIComponent(chatId));const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const link=el('a');link.href=url;link.download='suxenai-discussion.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}catch(e){toast(e.message)}};
 $('menu').onclick=()=>$('projects').closest('.sidebar').classList.toggle('open');
+// "⋯" menu: rare actions (import, export, backup) kept out of the way.
+(()=>{const b=$('moreButton'),m=$('moreMenu');const close=()=>{m.hidden=true;b.setAttribute('aria-expanded','false')};
+b.onclick=e=>{e.stopPropagation();m.hidden=!m.hidden;b.setAttribute('aria-expanded',String(!m.hidden))};
+m.addEventListener('click',close);document.addEventListener('click',e=>{if(!m.contains(e.target))close()});document.addEventListener('keydown',e=>{if(e.key==='Escape')close()})})();
 
 // GitHub project explorer: explicit, read-only file selection.
 let repositoryCache=[], repositoryLoadedFor=null;
@@ -33,8 +36,8 @@ function repoUiReset(){
   $('repoFileList').replaceChildren();
   $('attachedList').replaceChildren();
   $('repoNotice').textContent=activeProject()?.repo
-    ? 'Clique sur ↻ pour consulter le dépôt.'
-    : 'Ajoute une URL GitHub aux paramètres du projet.';
+    ? 'Cliquez sur ↻ pour parcourir '+activeProject().repo.replace(/^https?:\/\/github\.com\//,'')+'.'
+    : 'Aucun dépôt. Ajoutez-en un dans Réglages → Projet.';
 }
 async function attachedFiles(){
   if(!projectId)return;
@@ -44,7 +47,7 @@ async function attachedFiles(){
     if(pid!==projectId)return;
     $('attachedList').replaceChildren();
     if(!data.files.length)return;
-    $('attachedList').append(el('div','file-subheading','FICHIERS PARTAGÉS AVEC LES IA'));
+    $('attachedList').append(el('div','file-subheading','Partagés avec les IA'));
     for(const f of data.files){
       const row=el('div','repo-item');
       row.append(el('span','file-name',f.path));
@@ -57,7 +60,7 @@ async function attachedFiles(){
 function showRepositoryFiles(files){
   const root=$('repoFileList');root.replaceChildren();
   const search=el('input','field repo-search');
-  search.placeholder='Filtrer les fichiers…';search.setAttribute('aria-label','Filtrer les fichiers GitHub');
+  search.placeholder='Filtrer les fichiers…';search.type='search';search.setAttribute('aria-label','Filtrer les fichiers GitHub');
   const entries=el('div','repo-entries');
   function draw(){
     const term=search.value.toLowerCase().trim();
@@ -94,7 +97,7 @@ async function previewRepoFile(path){
   }catch(e){toast(e.message)}
 }
 $('refreshRepo').onclick=async()=>{
-  if(!projectId||!activeProject()?.repo)return toast('Configure d’abord une URL GitHub');
+  if(!projectId||!activeProject()?.repo)return toast('Ajoutez d’abord un dépôt dans Réglages → Projet');
   const pid=projectId;
   $('repoNotice').textContent='Lecture du dépôt GitHub…';
   try{
@@ -113,7 +116,8 @@ render=function(){
 };
 
 
-// v0.5: collaborative development workbench. No implicit GitHub modifications.
+// Code workbench. No implicit GitHub modifications.
+function statusLabel(s){return {proposed:'proposé',approved:'approuvé',changes_requested:'à corriger',published:'publié',archived:'archivé',failed:'échec'}[s]||s}
 async function workbenchRefresh(){
   const target=$('proposalList');if(!target||!chatId)return;
   const cid=chatId;
@@ -122,12 +126,12 @@ async function workbenchRefresh(){
     if(cid!==chatId)return;
     target.replaceChildren();
     if(!result.proposals.length){
-      target.append(el('p','inspector-info','Aucune modification proposée.'));return;
+      return;
     }
     for(const p of result.proposals){
       const row=el('button','proposal-row');
       const first=el('div','proposal-row-title');
-      first.append(el('span','',p.path),el('span','state-'+p.status,p.status));
+      first.append(el('span','',p.path),el('span','state state-'+p.status,statusLabel(p.status)));
       row.append(first,el('small','',p.instructions.slice(0,90)));
       row.onclick=()=>workbenchDetail(p.id);
       target.append(row);
@@ -264,19 +268,23 @@ $('importFile').onchange=async()=>{
   dlg.onclose=()=>{dlg.remove();archivePayload=null};dlg.showModal();
  }catch(e){toast(e.message)}finally{button.disabled=false}
 };
-$('searchArchive').onclick=()=>{
- if(!projectId)return toast('Sélectionne un projet');
- openDialog('Rechercher dans les conversations',[{key:'q',label:'Mot ou expression'}],async d=>{
-   const result=await api('search?project='+encodeURIComponent(projectId)+'&q='+encodeURIComponent(d.q));
-   const area=$('searchResults');area.hidden=false;area.replaceChildren();
-   const heading=el('div','file-subheading',result.results.length+' RÉSULTATS · CLIQUER POUR OUVRIR');area.append(heading);
-   for(const item of result.results){
-     const row=el('button','search-result');row.append(el('strong','',item.title),el('small','',item.speaker+' : '+item.excerpt));
-     row.onclick=()=>{chatId=item.chat;area.hidden=true;render()};
-     area.append(row);
-   }
-   if(!result.results.length)area.append(el('small','inspector-info','Aucun résultat'));
- });
-};
+// Sidebar search: this project, or all projects when the box is ticked.
+async function runSearch(){
+ const q=$('searchInput').value.trim(),all=$('searchAll').checked,area=$('searchResults');
+ if(!q){area.hidden=true;area.replaceChildren();return}
+ if(!all&&!projectId)return toast('Sélectionnez un projet');
+ try{
+  const result=all?await api('v9/search?q='+encodeURIComponent(q)):await api('search?project='+encodeURIComponent(projectId)+'&q='+encodeURIComponent(q));
+  area.hidden=false;area.replaceChildren();
+  const head=el('div','results-head');head.append(el('span','',result.results.length+' résultat'+(result.results.length>1?'s':'')));const x=el('button','iconbtn','✕');x.setAttribute('aria-label','Fermer la recherche');x.onclick=()=>{$('searchInput').value='';runSearch()};head.append(x);area.append(head);
+  for(const item of result.results){
+   const row=el('button','search-result');row.append(el('strong','',(all?item.project+' · ':'')+item.title),el('small','',(item.speaker?item.speaker+' : ':'')+item.excerpt));
+   row.onclick=()=>{if(all)projectId=item.project_id;chatId=item.chat;render()};area.append(row);
+  }
+ }catch(e){toast(e.message)}
+}
+$('searchInput').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();runSearch()}};
+$('searchInput').addEventListener('search',runSearch);$('searchAll').onchange=()=>{if($('searchInput').value.trim())runSearch()};
 
-refresh(false).catch(e=>toast(e.message));
+// First launch: the local server may still be starting; retry briefly instead of showing an empty window.
+(async function boot(tries=0){try{await refresh(false);if(!state.projects.length&&tries<10)setTimeout(()=>boot(tries+1),300)}catch(e){if(tries<10)setTimeout(()=>boot(tries+1),300);else toast(e.message)}})();

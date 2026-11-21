@@ -7,15 +7,14 @@
     ['github','GitHub','Dépôts privés et pull requests','https://github.com/settings/personal-access-tokens/new'],
     ['ollama','Ollama','IA locale, aucune clé nécessaire','https://ollama.com/'],
   ];
-  const dialog=$('connectionsDialog');
-  let status={},detectOnOpen=false;
+  let status={},detectOnOpen=false,mounted=null;
   function setResult(node,message,kind=''){node.textContent=message;node.dataset.kind=kind;}
   async function update(){
     try{status=(await api('connections')).providers;draw();}
-    catch(e){$('connectionCards').replaceChildren(el('p','connection-result',e.message));}
+    catch(e){mounted?.replaceChildren(el('p','connection-result',e.message));}
   }
   function draw(){
-    const root=$('connectionCards');root.replaceChildren();
+    const root=mounted;if(!root||!root.isConnected)return;root.replaceChildren();
     for(const [id,name,description,url] of providers){
       const card=el('section','connection-card');
       const head=el('div','connection-card-head'),title=el('div');title.append(el('h3','',name),el('p','',description));
@@ -42,9 +41,6 @@
       if(id==='ollama'&&detectOnOpen){detectOnOpen=false;test.click();}
     }
   }
-  function open(){if(dialog.open)return;detectOnOpen=true;dialog.showModal();$('connectionCards').replaceChildren(el('p','connection-result','Chargement…'));update();}
-  function close(){dialog.querySelectorAll('input[type=password]').forEach(i=>i.value='');try{localStorage.setItem('suxenai-onboarding-v8','1')}catch{}dialog.close();}
-  $('openConnections').onclick=open;$('closeConnections').onclick=close;$('skipConnections').onclick=close;$('finishConnections').onclick=close;
-  dialog.addEventListener('cancel',e=>{e.preventDefault();close()});
-  // In v1.0 the three modes are visible immediately; connecting APIs is optional.
+  // Rendered inside Réglages → Connexions IA.
+  window.suxenConnections={mount(root){mounted=root;detectOnOpen=true;root.replaceChildren(el('p','connection-result','Chargement…'));update();}};
 })();
