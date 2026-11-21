@@ -3,3 +3,7 @@ __pycache__/
 data/
 .env
 .DS_Store
+dist/
+build/
+*.spec
+SuxenAI-v*.zip

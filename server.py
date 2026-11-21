@@ -17,6 +17,7 @@ import workbench
 import importer
 import workspace_v7
 import batch
+import connections
 
 BASE = Path(__file__).resolve().parent
 DATA = Path(os.getenv("SUXENAI_DATA_DIR", BASE / "data"))
@@ -26,7 +27,7 @@ STATIC = BASE / "static"
 HOST, PORT = "127.0.0.1", int(os.getenv("SUXENAI_PORT", "8765"))
 LOCK = threading.RLock()
 DEFAULTS = {"openai":"gpt-4.1-mini","anthropic":"claude-sonnet-4-5","mistral":"mistral-small-latest","gemini":"gemini-2.5-flash","ollama":"llama3.2","demo":"demo"}
-ENV = {"openai":"OPENAI_API_KEY","anthropic":"ANTHROPIC_API_KEY","mistral":"MISTRAL_API_KEY","gemini":"GEMINI_API_KEY"}
+ENV = {k:v for k,v in connections.ENV.items() if k!='github'}
 
 def uid(): return str(uuid.uuid4())
 def now(): return datetime.now(timezone.utc).isoformat(timespec="seconds")
@@ -77,19 +78,19 @@ def add(cid,speaker,content):
 def http(url,payload,headers=None):
     request=urllib.request.Request(url,json.dumps(payload).encode(),{"Content-Type":"application/json",**(headers or {})},method="POST")
     try:
-        with urllib.request.urlopen(request,timeout=90) as resp: return json.load(resp)
-    except urllib.error.HTTPError as e: raise ValueError("Fournisseur HTTP %s : %s"%(e.code,e.read(500).decode(errors="replace")))
-    except urllib.error.URLError as e: raise ValueError("Connexion impossible : "+str(e.reason))
+        with connections.opener().open(request,timeout=90) as resp: return json.load(resp)
+    except urllib.error.HTTPError as e: raise ValueError("Fournisseur HTTP %s : vérifier la connexion, le modèle et le quota"%e.code) from None
+    except urllib.error.URLError: raise ValueError("Connexion fournisseur impossible") from None
 def generate(provider,model,messages):
     if provider=="demo":
         return "[DÉMONSTRATION : réponse simulée, aucune IA contactée] Je prends connaissance des messages de la discussion. Configure une API ou Ollama pour collaborer réellement."
-    if provider in ENV and not os.getenv(ENV[provider]):
-        raise ValueError("Clé API manquante : "+ENV[provider])
+    key=connections.key(provider) if provider in ENV else ''
+    if provider in ENV and not key:
+        raise ValueError("Clé API manquante : ouvrir Connexions IA")
     system=messages[0]["content"]
     turns=messages[1:]
     if provider in ("openai","mistral","ollama"):
         endpoint={"openai":"https://api.openai.com/v1/chat/completions","mistral":"https://api.mistral.ai/v1/chat/completions","ollama":os.getenv("OLLAMA_URL","http://127.0.0.1:11434").rstrip("/")+"/v1/chat/completions"}[provider]
-        key=os.getenv(ENV.get(provider,""),"")
         out=http(endpoint,{"model":model,"messages":messages,"stream":False},{"Authorization":"Bearer "+key} if key else {})
         return out["choices"][0]["message"]["content"]
     if provider=="anthropic":
@@ -98,11 +99,11 @@ def generate(provider,model,messages):
             role=t["role"]
             if adapted and adapted[-1]["role"]==role: adapted[-1]["content"]+="\n"+t["content"]
             else: adapted.append(dict(t))
-        out=http("https://api.anthropic.com/v1/messages",{"model":model,"max_tokens":2048,"system":system,"messages":adapted or [{"role":"user","content":"Bonjour"}]},{"x-api-key":os.environ["ANTHROPIC_API_KEY"],"anthropic-version":"2023-06-01"})
+        out=http("https://api.anthropic.com/v1/messages",{"model":model,"max_tokens":2048,"system":system,"messages":adapted or [{"role":"user","content":"Bonjour"}]},{"x-api-key":key,"anthropic-version":"2023-06-01"})
         return "\n".join(x.get("text","") for x in out.get("content",[]) if x.get("type")=="text")
     if provider=="gemini":
         content=[{"role":"model" if t["role"]=="assistant" else "user","parts":[{"text":t["content"]}]} for t in turns]
-        out=http("https://generativelanguage.googleapis.com/v1beta/models/"+quote(model,safe="")+":generateContent",{"contents":content or [{"role":"user","parts":[{"text":"Bonjour"}]}],"systemInstruction":{"parts":[{"text":system}]}},{"x-goog-api-key":os.environ["GEMINI_API_KEY"]})
+        out=http("https://generativelanguage.googleapis.com/v1beta/models/"+quote(model,safe="")+":generateContent",{"contents":content or [{"role":"user","parts":[{"text":"Bonjour"}]}],"systemInstruction":{"parts":[{"text":system}]}},{"x-goog-api-key":key})
         return "\n".join(p.get("text","") for c in out.get("candidates",[]) for p in c.get("content",{}).get("parts",[]))
     raise ValueError("Fournisseur inconnu")
 def model_turns(cid,agent):
@@ -146,11 +147,14 @@ def group_round(cid,targets=None,max_rounds=1):
 
 class Handler(BaseHTTPRequestHandler):
     def log_message(self,*args): pass
+    def local_host(self):
+        return self.headers.get('Host') in (f'127.0.0.1:{PORT}',f'localhost:{PORT}')
     def send(self,obj,status=200):
         body=json.dumps(obj,ensure_ascii=False).encode()
         self.send_response(status)
         self.send_header("Content-Type","application/json; charset=utf-8")
         self.send_header("Cache-Control","no-store")
+        self.send_header("X-Content-Type-Options","nosniff")
         self.send_header("Content-Length",str(len(body)))
         self.end_headers()
         self.wfile.write(body)
@@ -160,9 +164,13 @@ class Handler(BaseHTTPRequestHandler):
         return json.loads(self.rfile.read(n) or "{}")
     def do_GET(self):
         try:
+            if not self.local_host():self.send({'error':'Hôte non autorisé'},403);return
             p=urlparse(self.path); q=parse_qs(p.query)
+            if p.path=="/api/health":self.send({'app':'SuxenAI','version':'0.8'});return
+            if p.path=="/api/connections":
+                self.send({'providers':{k:connections.status(k) for k in connections.ENV}});return
             if p.path=="/api/state":
-                self.send({"projects":query("SELECT * FROM projects ORDER BY rowid DESC"),"chats":query("SELECT * FROM chats ORDER BY rowid DESC"),"agents":query("SELECT * FROM agents ORDER BY rowid"),"providers":[{"id":k,"model":v,"available":k=="demo" or k=="ollama" or bool(os.getenv(ENV.get(k,""))) } for k,v in DEFAULTS.items()]});return
+                self.send({"projects":query("SELECT * FROM projects ORDER BY rowid DESC"),"chats":query("SELECT * FROM chats ORDER BY rowid DESC"),"agents":query("SELECT * FROM agents ORDER BY rowid"),"providers":[{"id":k,"model":v,"available":k in ('demo','ollama') or connections.status(k)['configured']} for k,v in DEFAULTS.items()]});return
             if p.path=="/api/workspace/items":
                 self.send({"items":query("SELECT * FROM workspace_items WHERE project=? ORDER BY rowid DESC",(q.get("project",[""])[0],))});return
             if p.path=="/api/workspace/export":
@@ -222,14 +230,21 @@ class Handler(BaseHTTPRequestHandler):
             ext=candidate.suffix.lower()
             mime={".html":"text/html",".css":"text/css",".js":"text/javascript",".svg":"image/svg+xml"}.get(ext,"application/octet-stream")
             body=candidate.read_bytes()
-            self.send_response(200);self.send_header("Content-Type",mime+"; charset=utf-8");self.send_header("Content-Length",str(len(body)));self.end_headers();self.wfile.write(body)
+            self.send_response(200);self.send_header("Content-Type",mime+"; charset=utf-8");self.send_header("Content-Length",str(len(body)));self.send_header('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'");self.send_header('X-Content-Type-Options','nosniff');self.end_headers();self.wfile.write(body)
         except Exception as e: self.send({"error":str(e)},400)
     def do_POST(self):
         try:
+            if not self.local_host():self.send({'error':'Hôte non autorisé'},403);return
             if self.headers.get_content_type()!="application/json":raise ValueError("JSON attendu")
             origin=self.headers.get("Origin")
             if origin and origin not in (f"http://127.0.0.1:{PORT}",f"http://localhost:{PORT}"):raise ValueError("Origine non autorisée")
             p=urlparse(self.path).path; d=self.body()
+            if p.startswith('/api/connections/'):
+                if not origin or self.headers.get('Sec-Fetch-Site')=='cross-site':self.send({'error':'Ouvrir SuxenAI dans le navigateur'},403);return
+                if p=='/api/connections/save':connections.save(d.get('provider'),d.get('secret'));self.send({'ok':True});return
+                if p=='/api/connections/remove':connections.remove(d.get('provider'));self.send({'ok':True});return
+                if p=='/api/connections/test':self.send(connections.test(d.get('provider')));return
+                raise ValueError('Action de connexion inconnue')
             if p=="/api/workspace/import":
                 self.send({"id":workspace_v7.import_project(__import__(__name__),d)});return
             if p=="/api/workspace/items":

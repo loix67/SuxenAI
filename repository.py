@@ -10,6 +10,7 @@ import re
 import urllib.error
 import urllib.parse
 import urllib.request
+import connections
 
 MAX_FILE_BYTES = 80_000
 MAX_TREE_ITEMS = 1200
@@ -45,7 +46,7 @@ def validate_path(path):
 
 
 def github_get(route):
-    token = os.getenv("GITHUB_TOKEN", "").strip()
+    token = connections.key('github')
     url = "https://api.github.com" + route
     headers = {
         "Accept": "application/vnd.github+json",
@@ -56,7 +57,7 @@ def github_get(route):
         headers["Authorization"] = "Bearer " + token
     request = urllib.request.Request(url, headers=headers)
     try:
-        with urllib.request.urlopen(request, timeout=20) as resp:
+        with connections.opener().open(request, timeout=20) as resp:
             if int(resp.headers.get("Content-Length", 0)) > 2_500_000:
                 raise ValueError("Réponse GitHub trop volumineuse")
             return json.load(resp)

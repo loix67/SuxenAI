@@ -1,4 +1,14 @@
-# SuxenAI v0.7
+# SuxenAI v0.8
+
+## Démarrage simplifié (macOS)
+
+1. Téléchargez et décompressez SuxenAI. Dans le dossier, double-cliquez sur **SuxenAI.app** : le navigateur s'ouvre automatiquement.
+2. Au premier lancement, l'assistant **Connexions IA** permet de créer, coller, enregistrer et tester les clés OpenAI, Claude, Mistral, Gemini et GitHub. Ollama est détecté localement sans clé API.
+3. Ajoutez ensuite vos modèles dans **Équipe IA**. Vous pouvez rouvrir **Connexions IA** en haut à tout moment, remplacer ou retirer une clé. Les clés sont conservées dans le trousseau macOS, pas dans la base de données ; les variables d'environnement existantes restent prioritaires.
+
+Le lanceur inclus dans le code source nécessite Python 3.10+ déjà installé (aucune commande à saisir). Le workflow **macOS app** construit des archives distinctes Intel et Apple Silicon avec Python intégré, téléchargeables depuis GitHub Actions après compilation. Les builds ne sont pas encore signés/notariés pour une distribution publique. Les données d'un nouveau lancement sont enregistrées dans `~/Library/Application Support/SuxenAI` ; le lanceur source conserve un dossier `data` existant.
+
+La vérification des connexions consulte uniquement les listes de modèles (ou le profil GitHub) : aucun message du projet n'est envoyé. Les clés API peuvent être facturées indépendamment des abonnements web. GitHub : la vérification confirme l'authentification, pas toutes les permissions sur un dépôt donné.
 
 ## Nouveautés v0.7
 
@@ -24,7 +34,7 @@ python3 server.py
 
 Ouvrir `http://127.0.0.1:8765`.
 
-Pour utiliser les modèles réels, renseigner les variables d'environnement `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `MISTRAL_API_KEY`, `GEMINI_API_KEY` ou installer [Ollama](https://ollama.com), puis télécharger un modèle. L'agent `demo` simule des réponses : il ne peut ni coder ni auditer.
+Pour utiliser les modèles réels, utilisez **Connexions IA** sur macOS. Les variables d'environnement `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `MISTRAL_API_KEY`, `GEMINI_API_KEY` restent disponibles en mode avancé ou sur les autres systèmes. Pour Ollama, installez [Ollama](https://ollama.com), puis téléchargez un modèle. L'agent `demo` simule des réponses : il ne peut ni coder ni auditer.
 
 **Important :** ChatGPT Plus et Claude Pro ne fournissent pas automatiquement des clés API. Les connexions web aux abonnements ne sont pas intégrées. L'utilisation des API peut occasionner des frais chez chaque fournisseur.
 
@@ -46,11 +56,11 @@ Pour utiliser les modèles réels, renseigner les variables d'environnement `OPE
 7. **Confirmer manuellement** la création d'une nouvelle branche `suxenai/...` et d'une **pull request brouillon**. Aucune fusion automatique.
 8. Consulter l'état des tests GitHub de la PR. Les tests ne s'exécutent **que si le dépôt cible dispose d'un workflow CI**. Sinon SuxenAI indique explicitement qu'aucun test n'a été détecté.
 
-L'atelier travaille actuellement **un fichier existant par proposition et par PR**. Les changements sont séquentiels, pas parallèles, et les agents n'ont pas de terminal ni d'accès direct au système de fichiers. Il n'y a donc **pas** encore d'exécution automatique de tests locaux ni de modification coordonnée multi-fichiers. L'audit est une analyse par IA, pas une garantie de sécurité.
+L'atelier classique travaille sur un fichier par proposition. **Lot multi-fichiers** propose jusqu'à six fichiers existants dans une seule PR. Les agents n'ont pas de terminal ni d'accès direct au système de fichiers. Il n'y a pas d'exécution automatique de code généré sur la machine locale. L'audit est une analyse par IA, pas une garantie de sécurité.
 
 ### GitHub privé
 
-Définir `GITHUB_TOKEN` dans l'environnement du serveur :
+Configurez GitHub dans **Connexions IA**. En mode avancé, définir `GITHUB_TOKEN` dans l'environnement du serveur :
 
 ```bash
 export GITHUB_TOKEN="VOTRE_JETON"

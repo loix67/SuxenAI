@@ -11,6 +11,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from repository import parse_repo, validate_path, github_get
+import connections
 
 BRANCH_PATTERN = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9._/-]{0,120}$")
 MAX_PROPOSED_BYTES = 80_000
@@ -42,7 +43,7 @@ def encode_path(path):
 
 
 def github_write(method, route, payload):
-    token = os.getenv("GITHUB_TOKEN", "").strip()
+    token = connections.key('github')
     if not token:
         raise ValueError("GITHUB_TOKEN requis avec permission Contents: Read and write; Pull requests: Read and write")
     request = urllib.request.Request(
@@ -58,7 +59,7 @@ def github_write(method, route, payload):
         },
     )
     try:
-        with urllib.request.urlopen(request, timeout=30) as r:
+        with connections.opener().open(request, timeout=30) as r:
             return json.load(r)
     except urllib.error.HTTPError as e:
         # Deliberately avoid returning response bodies (could include sensitive data).
