@@ -12,6 +12,8 @@ from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from urllib.parse import urlparse, parse_qs, quote
 from datetime import datetime, timezone
 from repository import repository_tree, repository_file, MAX_CONTEXT_FILES, MAX_CONTEXT_BYTES
+from github_workflow import publish, ci_status, safe_branch
+import workbench
 
 BASE = Path(__file__).resolve().parent
 DATA = Path(os.getenv("SUXENAI_DATA_DIR", BASE / "data"))
@@ -44,6 +46,12 @@ def setup():
         CREATE TABLE IF NOT EXISTS agents(id TEXT PRIMARY KEY,chat TEXT NOT NULL REFERENCES chats(id),name TEXT NOT NULL,provider TEXT NOT NULL,model TEXT NOT NULL,role TEXT NOT NULL DEFAULT '',enabled INTEGER NOT NULL DEFAULT 1);
         CREATE TABLE IF NOT EXISTS messages(id TEXT PRIMARY KEY,chat TEXT NOT NULL REFERENCES chats(id),speaker TEXT NOT NULL,content TEXT NOT NULL,created TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS project_files(project TEXT NOT NULL REFERENCES projects(id),path TEXT NOT NULL,sha TEXT NOT NULL,content TEXT NOT NULL,added TEXT NOT NULL,PRIMARY KEY(project,path));
+        CREATE TABLE IF NOT EXISTS proposals(
+        id TEXT PRIMARY KEY,chat TEXT NOT NULL REFERENCES chats(id),author TEXT NOT NULL REFERENCES agents(id),
+        path TEXT NOT NULL,instructions TEXT NOT NULL,base_sha TEXT NOT NULL,original TEXT NOT NULL,
+        content TEXT NOT NULL,status TEXT NOT NULL,reviewer TEXT NOT NULL DEFAULT '',
+        review TEXT NOT NULL DEFAULT '',pr_url TEXT NOT NULL DEFAULT '',created TEXT NOT NULL);
+
         """)
         if not con.execute("SELECT 1 FROM projects LIMIT 1").fetchone():
             pid,cid=uid(),uid()
@@ -159,6 +167,19 @@ class Handler(BaseHTTPRequestHandler):
                 project=one("SELECT * FROM projects WHERE id=?",(pid,))
                 if not project:raise ValueError("Projet introuvable")
                 self.send(repository_file(project["repo"],q.get("path",[""])[0]));return
+            if p.path=="/api/workbench/proposals":
+                cid=q.get("chat",[""])[0];require_chat(cid)
+                self.send({"proposals":workbench.list_proposals(__import__(__name__),cid)});return
+            if p.path=="/api/workbench/proposal":
+                proposed=workbench.get_proposal(__import__(__name__),q.get("id",[""])[0])
+                self.send({"proposal":proposed});return
+            if p.path=="/api/workbench/ci":
+                proposed=workbench.get_proposal(__import__(__name__),q.get("id",[""])[0])
+                if not proposed["pr_url"]:raise ValueError("Publier une pull request avant d'inspecter les tests")
+                ch=require_chat(proposed["chat"]);project=one("SELECT * FROM projects WHERE id=?",(ch["project"],))
+                from urllib.parse import urlparse as parse_url
+                pr_number=int(parse_url(proposed["pr_url"]).path.rstrip("/").split("/")[-1])
+                self.send(ci_status(project["repo"],pr_number));return
             if p.path=="/api/messages":
                 self.send({"messages":history(q.get("chat",[""])[0])});return
             if p.path=="/api/export":
@@ -174,6 +195,38 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         try:
             p=urlparse(self.path).path; d=self.body()
+            if p=="/api/workbench/propose":
+                ch=require_chat(d["chat"])
+                agent=one("SELECT * FROM agents WHERE id=? AND chat=?",(d["agent"],ch["id"]))
+                if not agent or not agent["enabled"]:raise ValueError("IA participante introuvable")
+                if agent["provider"]=="demo":raise ValueError("Une IA de démonstration ne peut pas écrire du code")
+                result=workbench.request_change(__import__(__name__),ch,agent,d["path"],d["instructions"],generate,model_turns)
+                self.send({"id":result});return
+            if p=="/api/workbench/review":
+                proposed=workbench.get_proposal(__import__(__name__),d["id"])
+                agent=one("SELECT * FROM agents WHERE id=? AND chat=?",(d["reviewer"],proposed["chat"]))
+                if not agent or not agent["enabled"]:raise ValueError("IA auditrice introuvable")
+                if proposed["status"]=="published":raise ValueError("Modification déjà publiée")
+                status,review=workbench.review_change(__import__(__name__),proposed,agent,generate)
+                self.send({"status":status,"review":review});return
+            if p=="/api/workbench/publish":
+                proposed=workbench.get_proposal(__import__(__name__),d["id"])
+                if proposed["status"]!="approved" or not proposed["reviewer"]:
+                    raise ValueError("Audit positif indépendant obligatoire")
+                if d.get("confirm")!="PUBLISH_DRAFT_PR":
+                    raise ValueError("Confirmation explicite de publication requise")
+                ch=require_chat(proposed["chat"])
+                project=one("SELECT * FROM projects WHERE id=?",(ch["project"],))
+                safe_branch(d["branch"])
+                result=publish(project["repo"],proposed["path"],proposed["content"],
+                               proposed["base_sha"],d["branch"],d.get("title","SuxenAI: "+proposed["path"]),
+                               "Proposition SuxenAI vérifiée par une autre IA.\n\n"
+                               "Demande : "+proposed["instructions"]+"\n\n"
+                               "Audit indépendant :\n"+proposed["review"]+"\n\n"
+                               "IMPORTANT : tests automatiques non garantis. Valider avant fusion.")
+                write("UPDATE proposals SET status='published',pr_url=? WHERE id=?",(result["pr_url"],proposed["id"]))
+                add(ch["id"],"SuxenAI","Pull request brouillon créée : "+result["pr_url"])
+                self.send(result);return
             if p=="/api/repository/attach":
                 project=one("SELECT * FROM projects WHERE id=?",(d["project"],))
                 if not project:raise ValueError("Projet introuvable")
