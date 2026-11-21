@@ -1,60 +1,71 @@
-# SuxenAI
+# SuxenAI v0.5
 
-**Une discussion, plusieurs IA. Sans chef obligatoire.**
+**Une discussion, plusieurs IA, un espace de travail partagé. Aucun coordinateur obligatoire.**
 
-SuxenAI est un prototype libre et local de conversation collaborative entre plusieurs modèles. Il peut fonctionner sans projet, ou conserver un projet et l'URL d'un dépôt GitHub comme référence. **Cette version ne lit ni ne modifie encore le contenu d'un dépôt GitHub.**
+SuxenAI est un prototype gratuit et local, conçu pour réunir plusieurs modèles d'IA dans une conversation unique. Les participants sont configurables (OpenAI, Anthropic, Mistral, Gemini, Ollama) et peuvent recevoir des rôles facultatifs. L'interface est sombre, sobre, responsive.
 
-## Démarrage
+## Installation
 
-Python 3.10+ requis, aucune dépendance Python externe.
+Python 3.10 minimum. Aucune dépendance Python à installer.
 
 ```bash
 python3 server.py
 ```
 
-Ouvrir **http://127.0.0.1:8765**.
+Ouvrir `http://127.0.0.1:8765`.
 
-Pour les modèles réels, fournir une clé API dans les variables d'environnement `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `MISTRAL_API_KEY`, `GEMINI_API_KEY`, ou installer [Ollama](https://ollama.com) localement puis télécharger un modèle avec `ollama pull llama3.2`. Les abonnements web ChatGPT Plus, Claude Pro et Le Chat ne sont **pas** des clés API et ne sont pas connectés.
+Pour utiliser les modèles réels, renseigner les variables d'environnement `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `MISTRAL_API_KEY`, `GEMINI_API_KEY` ou installer [Ollama](https://ollama.com), puis télécharger un modèle. L'agent `demo` simule des réponses : il ne peut ni coder ni auditer.
 
-Pour essayer sans compte : ajouter un agent avec le fournisseur `demo`. Ses messages sont **simulés**, avec une mention visible.
+**Important :** ChatGPT Plus et Claude Pro ne fournissent pas automatiquement des clés API. Les connexions web aux abonnements ne sont pas intégrées. L'utilisation des API peut occasionner des frais chez chaque fournisseur.
 
-## Fonctionnalités v0.2
+## Collaboration
 
-- Une **conversation collective** avec plusieurs modèles, tours de parole successifs et contexte partagé.
-- Trois modes : **libre** (défaut), **ciblé** (avec `@Nom`), **coordonné** (coordinateur choisi facultativement).
-- Participants personnalisables : fournisseur, modèle, nom, spécialité optionnelle et activation/désactivation.
-- Projets, instructions communes, historique SQLite, branches de discussion.
-- Export JSON d'une conversation et de son équipe ; interface sombre responsive.
-- Maximum six participants et trois tours par action pour limiter les boucles et coûts.
+- Conversation collective, messages adressables avec `@Nom`, rôles libres et coordinateur facultatif
+- Modes libre, ciblé, coordonné
+- Projets, instructions partagées, branches de conversation, historique SQLite, export JSON
+- Explorateur GitHub en lecture seule ; prévisualisation et sélection des fichiers injectés dans le contexte des modèles
 
-**Limites à connaître :** les appels multi-IA sont séquentiels et non parallèles ; il n'y a pas encore d'import de documents, de gestion de fichiers Git, d'édition de code ou de tests automatiques d'un projet. Les fournisseurs peuvent facturer leurs appels API. Les modèles sélectionnés dans le code sont des valeurs par défaut à adapter selon les offres disponibles.
+### Atelier de code (v0.5)
 
-## Sécurité et confidentialité
+1. Associer le dépôt dans les paramètres du projet.
+2. Cliquer sur `+` dans la section **Atelier de code**.
+3. Choisir une IA, le **chemin exact d'un fichier existant**, puis saisir la modification à réaliser.
+4. L'IA produit une **proposition de contenu complet**, enregistrée en SQLite, sans écriture sur GitHub.
+5. Ouvrir la proposition pour comparer le contenu initial et la nouvelle version.
+6. Lancer un **audit par une autre IA** participante. Un verdict positif est obligatoire pour publier.
+7. **Confirmer manuellement** la création d'une nouvelle branche `suxenai/...` et d'une **pull request brouillon**. Aucune fusion automatique.
+8. Consulter l'état des tests GitHub de la PR. Les tests ne s'exécutent **que si le dépôt cible dispose d'un workflow CI**. Sinon SuxenAI indique explicitement qu'aucun test n'a été détecté.
 
-Le serveur n'écoute que sur `127.0.0.1`, sans compte utilisateur. N'exposez pas ce serveur sur Internet. Les messages et instructions de projet sont transmis aux fournisseurs choisis pour générer leurs réponses. Les clés API restent dans l'environnement du serveur. Ne chargez pas de données sensibles sans contrôler les fournisseurs utilisés.
+L'atelier travaille actuellement **un fichier existant par proposition et par PR**. Les changements sont séquentiels, pas parallèles, et les agents n'ont pas de terminal ni d'accès direct au système de fichiers. Il n'y a donc **pas** encore d'exécution automatique de tests locaux ni de modification coordonnée multi-fichiers. L'audit est une analyse par IA, pas une garantie de sécurité.
 
+### GitHub privé
 
-## v0.3 : connecter des fichiers GitHub (lecture seule)
-
-Dans **Projet → Configurer**, saisir une URL du type `https://github.com/owner/repo`.
-Puis, dans **Fichiers du projet**, cliquer sur **↻**. Le navigateur de fichiers présente les fichiers texte du dépôt (branche par défaut). Cliquer sur **Voir** pour examiner le contenu, puis **Partager avec les IA** pour l'inclure dans le contexte commun. Le bouton **Retirer** permet de supprimer cette copie du contexte.
-
-**Dépôts privés :** définir `GITHUB_TOKEN` dans l'environnement du serveur avant de le démarrer, avec accès en lecture au contenu des dépôts concernés. Ne jamais mettre le token dans l'interface, le code ou un fichier versionné. Exemple macOS :
+Définir `GITHUB_TOKEN` dans l'environnement du serveur :
 
 ```bash
-export GITHUB_TOKEN="<token-personnel-a-creer>"
+export GITHUB_TOKEN="VOTRE_JETON"
 python3 server.py
 ```
 
-Limites : 8 fichiers par projet, 80 Ko par fichier, 120 Ko au total. Les fichiers sensibles courants comme `.env`, les clés privées et certificats sont exclus. La sélection est enregistrée localement en SQLite et partagée avec **tous** les fournisseurs IA activés sur le projet lors des prochains appels. Ne pas partager de secrets ou de données confidentielles. Les fichiers ne sont **pas synchronisés automatiquement** après une modification du dépôt ; il faut les sélectionner de nouveau. L'API GitHub peut appliquer ses quotas.
+Pour consulter un dépôt privé, le jeton a besoin de la permission **Contents: Read**. Pour publier une PR depuis SuxenAI, il faut **Contents: Read and write** et **Pull requests: Read and write** sur le dépôt cible. Utiliser un jeton à portée minimale, ne jamais le committer et le révoquer s'il fuit.
 
-Cette v0.3 ne permet **ni de modifier le dépôt, ni de committer, ni d'exécuter du code**. Elle constitue l'étape de lecture du projet avant le développement des outils d'édition sécurisée.
+Les branches `main` et `master` ne peuvent pas être choisies comme branches de publication. Une nouvelle branche dédiée est créée à chaque publication. En cas de panne réseau au milieu d'une publication, une branche orpheline peut subsister : vérifier GitHub avant de réessayer.
 
-## Tests
+### Données transmises aux IA
+
+Les fichiers que vous sélectionnez sont enregistrés localement puis transmis **aux fournisseurs d'IA participants** lors de la génération de réponses. Ils ne doivent pas contenir de secrets ni de données sensibles. Le navigateur de dépôt bloque certains noms de fichiers sensibles, sans prétendre détecter tous les secrets possibles.
+
+L'explorateur accepte jusqu'à 8 fichiers de contexte par projet, 80 Ko par fichier, 120 Ko au total. Ils ne sont pas synchronisés automatiquement après modification du dépôt. Recharger manuellement un fichier pour actualiser son contenu. Les propositions vérifient le SHA initial avant d'écrire, pour empêcher l'écrasement silencieux d'une modification récente.
+
+Le serveur écoute uniquement sur `127.0.0.1` et n'a pas d'authentification. Ne pas l'exposer sur Internet.
+
+## Tests du logiciel SuxenAI
 
 ```bash
 python3 -m unittest discover -s tests -v
 ```
+
+Les workflows GitHub Actions du **projet cible** sont distincts des tests de SuxenAI.
 
 ## Licence
 
