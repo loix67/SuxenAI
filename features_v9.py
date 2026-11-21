@@ -11,9 +11,12 @@ LOCAL_PROVIDERS={'ollama','demo'}
 
 
 def policy(db,pid):
-    p=db.one('SELECT * FROM project_preferences WHERE project=?',(pid,)) or {'project':pid,'local_only':0,'recall':0}
+    stored=db.one('SELECT * FROM project_preferences WHERE project=?',(pid,))
+    p=stored or {'project':pid,'local_only':0,'recall':0}
     web=db.one('SELECT enabled FROM project_web_modes WHERE project=?',(pid,))
-    p['mode']='web' if web and web['enabled'] else 'local' if p['local_only'] else 'api'
+    # A project never configured starts in Web mode: no API call can be billed by default.
+    if web is None and stored is None:p['mode']='web'
+    else:p['mode']='web' if web and web['enabled'] else 'local' if p['local_only'] else 'api'
     return p
 
 

@@ -25,8 +25,7 @@ def main():
             assert server.one('SELECT id FROM projects')
             assert (server.STATIC/'connections.js').is_file()
             assert (server.STATIC/'features.js').is_file()
-            assert (server.STATIC/'future.css').is_file()
-            assert (server.STATIC/'graphite.css').is_file()
+            assert (server.STATIC/'suxen.css').is_file()
             assert (server.STATIC/'desktop-controls.js').is_file()
             assert (server.STATIC/'web-workspace.js').is_file()
             import pypdf
