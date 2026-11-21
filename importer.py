@@ -124,7 +124,7 @@ def preview(encoded,filename,source="auto"):
             "count":len(records)}
 
 
-def import_selected(db, project_id, encoded, filename, selected_ids, source="auto"):
+def import_selected(db, project_id, encoded, filename, selected_ids, source="auto", template_chat=None):
     if not isinstance(selected_ids,list) or not selected_ids or len(selected_ids)>MAX_IMPORT_CONVERSATIONS:
         raise ValueError("Sélectionner entre 1 et 100 conversations")
     wanted={str(x) for x in selected_ids}
@@ -132,6 +132,11 @@ def import_selected(db, project_id, encoded, filename, selected_ids, source="aut
     project=db.one("SELECT id FROM projects WHERE id=?",(project_id,))
     if not project:raise ValueError("Projet introuvable")
     conversations=parse_export(encoded,filename,source)
+    template_agents=[]
+    if template_chat:
+        existing=db.one("SELECT id FROM chats WHERE id=? AND project=?",(template_chat,project_id))
+        if not existing:raise ValueError("Discussion source invalide")
+        template_agents=db.agents(template_chat)
     chosen=[x for x in conversations if x["id"] in wanted]
     if len(chosen)!=len(wanted):raise ValueError("Certaines conversations sélectionnées sont absentes")
     imported=[]
@@ -145,6 +150,10 @@ def import_selected(db, project_id, encoded, filename, selected_ids, source="aut
             for m in item["messages"]:
                 con.execute("INSERT INTO messages VALUES(?,?,?,?,?)",
                     (db.uid(),cid,m["speaker"],m["content"],db.now()))
+            for agent in template_agents:
+                con.execute("INSERT INTO agents VALUES(?,?,?,?,?,?,?)",(
+                    db.uid(),cid,agent["name"],agent["provider"],agent["model"],
+                    agent["role"],agent["enabled"]))
             con.execute("INSERT INTO import_origins VALUES(?,?,?,?,?)",
                 (cid,item["source"],filename,item["id"],db.now()))
             imported.append({"id":cid,"source":item["source"],"title":item["title"],
