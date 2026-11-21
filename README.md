@@ -1,4 +1,17 @@
-# SuxenAI v0.8
+# SuxenAI v0.9
+
+## Nouveautés v0.9
+
+- **Outils → Mode IA** : mode local gratuit par projet (bloque les modèles cloud côté serveur), désactivation temporaire des IA non connectées, messages d'erreur quota/clé améliorés.
+- **Outils → Modèles locaux** : détection d'Ollama, liste des modèles installés, téléchargement explicite et ajout à la discussion. Ollama doit être installé et démarré séparément.
+- **Outils → Consommation** : appels et tokens rapportés par chaque fournisseur, estimations USD sur les tarifs saisis par modèle. Les tarifs inconnus sont signalés, aucun prix inventé.
+- **Documents & mémoire** : extraction locale PDF, DOCX, XLSX et texte (6 Mo par fichier, texte limité à 80 Ko, PDF 100 pages maximum). Pas d'OCR, de macros ni de calcul de formules. Les documents restent privés par défaut.
+- Mémoire intelligente optionnelle, recherche locale par mots dans les anciennes discussions du même projet, recherche globale et mode concentration.
+- Atelier : jusqu'à six fichiers existants ou nouveaux, chemins nouveaux explicitement sélectionnés ; vérification de non-écrasement avant publication, audit et confirmation conservés.
+- Sauvegarde JSON de tous les projets, conversations, équipes, documents, historique d'atelier et consommation. Restauration en copies sans écraser les données, propositions restaurées en archive, dépôt à reconnecter et partage/rappel désactivés. Les clés API sont exclues.
+- Recherche manuelle ou automatique (sur activation) des nouvelles versions dans GitHub Releases. L'installation automatique reste désactivée tant que les distributions ne sont pas signées/notariées.
+
+Le paquet Mac autonome inclut les dépendances PDF et HTTPS. Pour la version source, installer `pypdf` si la lecture PDF est nécessaire.
 
 ## Démarrage simplifié (macOS)
 
@@ -18,7 +31,7 @@ La vérification des connexions consulte uniquement les listes de modèles (ou l
 - Diff unifié par fichier et vérification statique Python/JSON sans exécution du code proposé. Les autres formats sont signalés comme non vérifiés.
 - Publication explicite en un commit sur une nouvelle branche et PR brouillon, contrôle des versions sources. Aucun merge automatique. Les workflows GitHub existants peuvent exécuter des tests après publication ; aucun test généré n'est lancé sur la machine locale.
 
-Les analyses statiques ne prouvent pas le bon fonctionnement du code. Les documents bureautiques binaires, la création de nouveaux fichiers dans les lots et l'exécution isolée de tests générés ne sont pas encore pris en charge.
+Les analyses statiques ne prouvent pas le bon fonctionnement du code. L'exécution isolée de tests générés n'est pas encore prise en charge.
 
 **Une discussion, plusieurs IA, un espace de travail partagé. Aucun coordinateur obligatoire.**
 

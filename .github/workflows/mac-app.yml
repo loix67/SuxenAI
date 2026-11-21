@@ -2,7 +2,7 @@ name: macOS app
 on:
   workflow_dispatch:
   push:
-    branches: ['feat/connections-v0-8']
+    branches: ['feat/connections-v0-8','feat/workspace-v0-9']
 jobs:
   build:
     strategy:
@@ -23,8 +23,8 @@ jobs:
         with:
           python-version: '3.12'
           architecture: ${{ matrix.architecture }}
+      - run: python -m pip install 'pyinstaller==6.22.3' certifi 'pypdf==7.1.1'
       - run: python -m unittest discover -s tests -v
-      - run: python -m pip install 'pyinstaller==6.22.3' certifi
       - run: python -m PyInstaller --noconfirm --windowed --onedir --name SuxenAI --osx-bundle-identifier org.suxenai.local --add-data 'static:static' launcher.py
       - run: dist/SuxenAI.app/Contents/MacOS/SuxenAI --self-test
       - run: ditto -c -k --sequesterRsrc --keepParent dist/SuxenAI.app SuxenAI-${{ matrix.architecture }}.zip

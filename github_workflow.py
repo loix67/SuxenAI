@@ -10,7 +10,7 @@ import re
 import urllib.error
 import urllib.parse
 import urllib.request
-from repository import parse_repo, validate_path, github_get
+from repository import parse_repo, validate_path, github_get, ensure_new_path
 import connections
 
 BRANCH_PATTERN = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9._/-]{0,120}$")
@@ -148,13 +148,18 @@ def publish_batch(repo_url, files, branch, title, description):
     head = github_get(root + '/git/ref/heads/' + urllib.parse.quote(default, safe=''))['object']['sha']
     base = github_get(root + '/git/commits/' + head)['tree']['sha']
     entries = []
+    tree_data=None
     for f in files:
         path = validate_path(f['path'])
         if path.startswith('.github/'):
             raise ValueError('Modification des workflows interdite dans un lot')
-        current = github_get(root + '/contents/' + encode_path(path) + '?ref=' + head)
-        if current.get('sha') != f['sha']:
-            raise ValueError('Source modifiée depuis la proposition : ' + path)
+        if f['sha']:
+            current = github_get(root + '/contents/' + encode_path(path) + '?ref=' + head)
+            if current.get('sha') != f['sha']:
+                raise ValueError('Source modifiée depuis la proposition : ' + path)
+        else:
+            if tree_data is None:tree_data=github_get(root+'/git/trees/'+base+'?recursive=1')
+            ensure_new_path(tree_data,path)
         if f['content'] != f['proposed']:
             entries.append({'path':path,'mode':'100644','type':'blob','content':safe_content(f['proposed'])})
     if not entries:

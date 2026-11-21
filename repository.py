@@ -38,11 +38,28 @@ def validate_path(path):
     if not isinstance(path, str) or not path or len(path) > 400:
         raise ValueError("Chemin de fichier invalide")
     parts = path.split("/")
-    if any(p in ("", ".", "..") for p in parts) or "\\" in path:
+    if any(p in ("", ".", "..") for p in parts) or "\\" in path or any(ord(c)<32 for c in path):
         raise ValueError("Chemin de fichier non autorisé")
     if SECRET_NAMES.search(path):
         raise ValueError("Fichier sensible bloqué par défaut")
     return path
+
+
+def new_file_snapshot(repo_url,path):
+    path=validate_path(path)
+    if path.startswith(('.github/','.git/')):raise ValueError('Chemin réservé')
+    info=repository_info(repo_url)
+    tree=github_get('/repos/'+info['name']+'/git/trees/'+urllib.parse.quote(info['branch'],safe='')+'?recursive=1')
+    ensure_new_path(tree,path)
+    return {'path':path,'content':'','sha':'','branch':info['branch'],'bytes':0}
+
+
+def ensure_new_path(tree,path):
+    if tree.get('truncated'):raise ValueError('Arborescence tronquée : création refusée')
+    for entry in tree.get('tree',[]):
+        existing=entry.get('path','')
+        if existing==path or existing.startswith(path+'/') or (path.startswith(existing+'/') and entry.get('type')!='tree'):
+            raise ValueError('Chemin déjà présent ou incompatible : '+path)
 
 
 def github_get(route):

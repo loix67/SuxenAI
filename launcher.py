@@ -24,6 +24,8 @@ def main():
             server.setup()
             assert server.one('SELECT id FROM projects')
             assert (server.STATIC/'connections.js').is_file()
+            assert (server.STATIC/'features.js').is_file()
+            import pypdf
             assert (server.STATIC/'index.html').is_file()
             server.connections.MacKeychain()  # load native API only; no keychain access
             server.connections.opener()  # initialize HTTPS trust store
@@ -39,7 +41,7 @@ def main():
     try:
         with urllib.request.urlopen(url+'/api/health',timeout=1) as response:
             running=json.load(response)
-        if running=={'app':'SuxenAI','version':'0.8'}:
+        if running=={'app':'SuxenAI','version':server.v9.VERSION}:
             webbrowser.open(url);return
     except (OSError,ValueError):
         pass
