@@ -66,16 +66,18 @@ class ConversationImportTests(unittest.TestCase):
                 server.setup()
                 pid=server.query("SELECT id FROM projects")[0]["id"]
                 chats_before=len(server.query("SELECT id FROM chats"))
+                template_chat=server.query("SELECT id FROM chats")[0]["id"]
                 preview=importer.preview(payload(source),"claude.json")
                 self.assertEqual(len(server.query("SELECT id FROM chats")),chats_before)
                 self.assertEqual(preview["count"],2)
-                result=importer.import_selected(server,pid,payload(source),"claude.json",["1"])
+                result=importer.import_selected(server,pid,payload(source),"claude.json",["1"],template_chat=template_chat)
                 self.assertEqual(result["count"],1)
                 self.assertEqual(len(server.query("SELECT id FROM chats")),chats_before+1)
                 imported=server.query("SELECT * FROM import_origins")
                 self.assertEqual(imported[0]["source"],"Claude")
                 messages=server.history(result["imported"][0]["id"])
                 self.assertEqual(messages[0]["content"],"B")
+                self.assertEqual(len(server.agents(result["imported"][0]["id"])),3)
         finally:
             server.DB=previous
 
