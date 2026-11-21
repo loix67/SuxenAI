@@ -37,8 +37,15 @@ ENV = {k:v for k,v in connections.ENV.items() if k!='github'}
 
 def uid(): return str(uuid.uuid4())
 def now(): return datetime.now(timezone.utc).isoformat(timespec="seconds")
+class ClosingConnection(sqlite3.Connection):
+    """`with connection() as con:` commits (or rolls back) and then closes the file.
+    sqlite3's own context manager never closes it, which leaks file handles and
+    prevents Windows from deleting the database file."""
+    def __exit__(self,*exc):
+        try:return super().__exit__(*exc)
+        finally:self.close()
 def connection():
-    con=sqlite3.connect(DB, timeout=30)
+    con=sqlite3.connect(DB, timeout=30, factory=ClosingConnection)
     con.row_factory=sqlite3.Row
     con.execute("PRAGMA foreign_keys=ON")
     return con
