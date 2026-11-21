@@ -6,7 +6,7 @@ import urllib.error
 import urllib.request
 import connections
 
-VERSION='1.0'
+VERSION='1.0.1'
 LOCAL_PROVIDERS={'ollama','demo'}
 
 

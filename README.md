@@ -1,4 +1,6 @@
-# SuxenAI v1.0
+# SuxenAI v1.0.1
+
+**Édition Graphite :** interface futuriste en gris anthracite et acier, accent cyan limité aux signaux et actions importantes, nuances violettes discrètes. Les possibilités de la v1.0 sont conservées.
 
 ## Nouveautés v1.0 — espace multi-IA
 
