@@ -255,7 +255,7 @@ $('importFile').onchange=async()=>{
     if(selected.length>100)return toast('Maximum 100 conversations par import');
     save.disabled=true;
     try{
-      const result=await api('import/selected',{project:projectId,...archivePayload,selected});
+      const result=await api('import/selected',{project:projectId,template_chat:chatId,...archivePayload,selected});
       dlg.close();archivePayload=null;await refresh();toast(result.count+' conversations importées');
     }catch(e){toast(e.message)}finally{save.disabled=false}
   };
