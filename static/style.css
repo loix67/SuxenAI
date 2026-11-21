@@ -14,3 +14,19 @@
 .preview-path{font-size:12px;color:#9fddc5;overflow-wrap:anywhere}
 .preview-code{margin:0;background:#0b1218;color:#d7e4e5;border:1px solid #30454d;border-radius:10px;padding:15px;overflow:auto;min-height:120px;max-height:63vh;font-size:11px;white-space:pre}
 .preview-actions{display:flex;gap:10px;justify-content:flex-end}
+
+/* v0.5 workbench */
+.proposal-list{display:grid;gap:9px}
+.proposal-row{width:100%;background:#132028;border:1px solid #2c4045;border-radius:10px;padding:11px 12px;color:#c7d6dd;text-align:left;display:grid;gap:6px}
+.proposal-row:hover{border-color:#54756b;background:#1a2b31}
+.proposal-row-title{display:flex;gap:8px;align-items:center;justify-content:space-between;min-width:0}
+.proposal-row-title>span:first-child{max-width:145px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;font-weight:650}
+.proposal-row small{font-size:10px;color:#8199a3;display:block;line-height:1.5}
+.proposal-row-title>span:last-child{font-size:9px;border-radius:6px;padding:3px 5px;background:#26353b;color:#91aeb5}
+.state-approved{color:#a3e2c5!important;background:#213e33!important}
+.state-changes_requested{color:#e3b3a6!important;background:#412e2d!important}
+.state-published{color:#c0cdef!important;background:#2d3550!important}
+.review-report{white-space:pre-wrap;overflow-wrap:anywhere;color:#c4d7de;background:#111d24;padding:15px;border:1px solid #30454d;border-radius:9px;font-size:12px;max-height:220px;overflow:auto}
+.workbench-dialog .preview-code{max-height:22vh;min-height:80px}
+.workbench-dialog h3{margin:0;font-size:18px;font-weight:550}
+.workbench-dialog .preview-actions{flex-wrap:wrap;align-items:center}
