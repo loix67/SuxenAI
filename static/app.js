@@ -26,4 +26,90 @@ $('input').onkeydown=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();$('
 $('runRound').onclick=()=>teamRun();
 $('exportChat').onclick=async()=>{if(!chatId)return;try{const data=await api('export?chat='+encodeURIComponent(chatId));const url=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:'application/json'}));const link=el('a');link.href=url;link.download='suxenai-discussion.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}catch(e){toast(e.message)}};
 $('menu').onclick=()=>$('projects').closest('.sidebar').classList.toggle('open');
+
+// GitHub project explorer: explicit, read-only file selection.
+let repositoryCache=[], repositoryLoadedFor=null;
+function repoUiReset(){
+  $('repoFileList').replaceChildren();
+  $('attachedList').replaceChildren();
+  $('repoNotice').textContent=activeProject()?.repo
+    ? 'Clique sur ↻ pour consulter le dépôt.'
+    : 'Ajoute une URL GitHub aux paramètres du projet.';
+}
+async function attachedFiles(){
+  if(!projectId)return;
+  const pid=projectId;
+  try{
+    const data=await api('repository/attached?project='+encodeURIComponent(pid));
+    if(pid!==projectId)return;
+    $('attachedList').replaceChildren();
+    if(!data.files.length)return;
+    $('attachedList').append(el('div','file-subheading','FICHIERS PARTAGÉS AVEC LES IA'));
+    for(const f of data.files){
+      const row=el('div','repo-item');
+      row.append(el('span','file-name',f.path));
+      const b=el('button','file-button','Retirer');b.title='Retirer du contexte partagé';
+      b.onclick=async()=>{try{await api('repository/detach',{project:pid,path:f.path});await attachedFiles();toast('Fichier retiré du contexte')}catch(e){toast(e.message)}};
+      row.append(b);$('attachedList').append(row);
+    }
+  }catch(e){toast(e.message)}
+}
+function showRepositoryFiles(files){
+  const root=$('repoFileList');root.replaceChildren();
+  const search=el('input','field repo-search');
+  search.placeholder='Filtrer les fichiers…';search.setAttribute('aria-label','Filtrer les fichiers GitHub');
+  const entries=el('div','repo-entries');
+  function draw(){
+    const term=search.value.toLowerCase().trim();
+    const subset=files.filter(f=>f.path.toLowerCase().includes(term)).slice(0,60);
+    entries.replaceChildren();
+    for(const f of subset){
+      const row=el('div','repo-item');
+      row.append(el('span','file-name',f.path));
+      const b=el('button','file-button','Voir');
+      b.onclick=()=>previewRepoFile(f.path);
+      row.append(b);entries.append(row);
+    }
+    if(files.length>60)entries.append(el('small','repo-trunc','60 résultats maximum affichés. Utilise le filtre.'));
+    if(!subset.length)entries.append(el('small','repo-trunc','Aucun fichier trouvé.'));
+  }
+  search.oninput=draw;root.append(search,entries);draw();
+}
+async function previewRepoFile(path){
+  if(!projectId)return;
+  const pid=projectId;
+  try{
+    const result=await api('repository/preview?project='+encodeURIComponent(pid)+'&path='+encodeURIComponent(path));
+    if(pid!==projectId)return;
+    const d=document.createElement('dialog');d.className='preview-dialog';
+    const body=el('div','preview-body');
+    body.append(el('div','preview-path',result.path+' · '+result.bytes+' octets'));
+    const pre=el('pre','preview-code',result.content);body.append(pre);
+    const actions=el('div','preview-actions');
+    const cancel=el('button','ghost','Fermer');cancel.onclick=()=>d.close();
+    const attach=el('button','primary','Partager avec les IA');
+    attach.onclick=async()=>{attach.disabled=true;try{await api('repository/attach',{project:pid,path});d.close();await attachedFiles();toast('Fichier partagé avec les participants du projet')}catch(e){toast(e.message)}finally{attach.disabled=false}};
+    actions.append(cancel,attach);body.append(actions);d.append(body);document.body.append(d);
+    d.onclose=()=>d.remove();d.showModal();
+  }catch(e){toast(e.message)}
+}
+$('refreshRepo').onclick=async()=>{
+  if(!projectId||!activeProject()?.repo)return toast('Configure d’abord une URL GitHub');
+  const pid=projectId;
+  $('repoNotice').textContent='Lecture du dépôt GitHub…';
+  try{
+    const info=await api('repository/tree?project='+encodeURIComponent(pid));
+    if(pid!==projectId)return;
+    repositoryLoadedFor=pid;repositoryCache=info.files;
+    $('repoNotice').textContent=info.repository.name+' · '+info.repository.branch+' · '+info.files.length+' fichiers';
+    showRepositoryFiles(info.files);await attachedFiles();
+  }catch(e){$('repoNotice').textContent=e.message;toast(e.message)}
+};
+const renderOriginal=render;
+render=function(){
+  renderOriginal();
+  if(repositoryLoadedFor!==projectId){repositoryLoadedFor=null;repositoryCache=[];repoUiReset();}
+  attachedFiles();
+};
+
 refresh(false).catch(e=>toast(e.message));
